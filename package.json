@@ -1,0 +1,24 @@
+{
+  "name": "logithon-caseops",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Human-approved cargo loading safety with UiPath Maestro.",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:api": "node backend/server.js",
+    "dev:web": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "node backend/tests/riskEngine.test.js"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^6.0.3",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "vite": "^8.1.0"
+  }
+}
