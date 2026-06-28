@@ -28,4 +28,42 @@ const instruction = createDispatchInstruction(sampleCases[2], {
 assert.equal(instruction.final_decision, "Dispatch approved with safer loading plan");
 assert.equal(instruction.close_case, true);
 
+const liveOperatorCase = analyzeCargo({
+  case_id: "LCOPS-LIVE-TEST",
+  shipment_id: "SHP-LIVE-TEST",
+  truck_capacity_kg: 6500,
+  cargo_items: [
+    {
+      name: "Dense machine pallet",
+      quantity: 3,
+      unit_weight_kg: 2100,
+      heavy: true,
+      stack_position: "floor"
+    },
+    {
+      name: "Fragile replacement sensors",
+      quantity: 6,
+      unit_weight_kg: 18,
+      fragile: true,
+      stack_position: "top"
+    }
+  ],
+  weight_distribution: {
+    left_kg: 6100,
+    right_kg: 308,
+    front_kg: 3600,
+    rear_kg: 2808
+  },
+  evidence: {
+    image_uploaded: true,
+    photo_quality: "operator-attested"
+  },
+  metadata: {
+    manual_entry_only: true
+  }
+});
+assert.equal(liveOperatorCase.risk_level, "High");
+assert.equal(liveOperatorCase.requires_human_review, true);
+assert.ok(liveOperatorCase.detected_issues.some((issue) => issue.id === "weight_imbalance"));
+
 console.log("riskEngine tests passed");

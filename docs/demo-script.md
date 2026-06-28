@@ -2,23 +2,28 @@
 
 ## Opening
 
-Logithon CaseOps is a human-approved cargo loading safety workflow orchestrated by UiPath Maestro Case. The key point is governance: AI helps analyze cargo, but risky loading decisions are routed to a supervisor before dispatch.
+Logithon CaseOps is a UiPath Maestro Case solution for cargo loading safety. It focuses on exception-heavy work: an AI-style risk service can detect unsafe loading patterns, but Maestro owns the governed case lifecycle and routes risky decisions to a human supervisor before dispatch.
 
-## Scenario
+## Live Demo Path
 
-1. A warehouse receives a shipment request for industrial equipment.
-2. UiPath Maestro Case creates `LCOPS-1002`.
-3. The Logithon coded AI cargo-risk service reviews the cargo list and mock dock evidence.
-4. The service detects that the truck is above 90 percent capacity and that dense pallets are heavily left-biased.
-5. The case is routed to human supervisor approval.
-6. The supervisor approves only after a safer loading plan is captured.
-7. Dispatch instructions are generated.
-8. UiPath Maestro closes the case with an audit trail.
+1. Open the dashboard and point out the Track 1: UiPath Maestro Case label.
+2. Show the Maestro case plan panel: stages, task contracts, personas, and trigger count.
+3. Create a live case from the intake panel using a cargo manifest, truck capacity, evidence state, and weight distribution.
+4. Select the new live case and show that it is not one of the sample cases.
+5. Explain the external key: `shipment_id` maps to the Maestro case key.
+6. Show risk analysis: overload, near capacity, imbalance, fragile stacking, missing evidence, hazmat, temperature, damaged cargo, and confidence rules.
+7. If the risk requires review, show the Human Supervisor Approval stage and approval reasons.
+8. Run the demo scenario to show the end-to-end API handoff: case creation, stage update, analysis, risk score, human decision, dispatch instruction, and closure.
+9. Close on the audit timeline and API contract for UiPath API Workflows.
 
 ## Narration Beat
 
-This is not only a dashboard. The dashboard is the visible demo surface, but the enterprise workflow is Maestro-driven. The coded agent produces explainable cargo analysis, and Maestro owns stage control, auditability, and human approval.
+The dashboard is the demo surface, not the orchestrator. UiPath Maestro Case is the orchestrator: it models stages, rules, re-entry, SLAs, personas, human tasks, and case operations. The coded service is one task worker inside that case plan.
+
+## What To Say About Data
+
+The three `LCOPS-1001` to `LCOPS-1003` cases are sample scenarios for a reliable demo. The Live Cargo Intake panel creates a new case from operator-entered data and sends it through the same risk engine and Maestro-style API contract.
 
 ## Closing
 
-Codex built the coded cargo analysis service, risk scoring logic, API endpoints, frontend dashboard, mock logistics cases, UiPath integration contract, and this demo script. UiPath Maestro remains the orchestration and governance layer.
+Codex built the external cargo-risk service, Express API, React demo surface, live intake path, Maestro case plan artifact, task I/O contracts, and submission documentation. UiPath Maestro Case remains the enterprise orchestration and governance layer.

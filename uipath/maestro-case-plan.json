@@ -1,0 +1,171 @@
+{
+  "name": "LogithonCargoSafety",
+  "track": "UiPath Maestro Case",
+  "caseKey": {
+    "type": "external",
+    "externalKeyField": "shipment_id",
+    "fallbackSystemPrefix": "LCOPS"
+  },
+  "caseEntity": {
+    "entityName": "CargoLoadSafetyCase",
+    "inputFields": [
+      "shipment_id",
+      "warehouse_id",
+      "dock_id",
+      "truck_type",
+      "truck_capacity_kg",
+      "cargo_items",
+      "weight_distribution",
+      "evidence",
+      "metadata"
+    ],
+    "computedFields": {
+      "cargoVision.status": "Cargo Vision Review",
+      "cargoVision.confidence": "Cargo Vision Review",
+      "risk.score": "Load Risk Analysis",
+      "risk.level": "Load Risk Analysis",
+      "risk.detectedIssues": "Load Risk Analysis",
+      "risk.requiresHumanReview": "Load Risk Analysis",
+      "approval.status": "Human Supervisor Approval",
+      "approval.notes": "Human Supervisor Approval",
+      "dispatch.finalDecision": "Dispatch Instruction",
+      "dispatch.loadingControls": "Dispatch Instruction"
+    }
+  },
+  "triggers": [
+    {
+      "source": "Data Fabric row created",
+      "entity": "CargoLoadSafetyCase"
+    },
+    {
+      "source": "Wait for connector or API trigger",
+      "endpoint": "POST /api/uipath/case-created"
+    },
+    {
+      "source": "Dashboard live intake",
+      "endpoint": "POST /api/live-cases"
+    }
+  ],
+  "personas": [
+    {
+      "name": "Warehouse Intake",
+      "viewStages": ["Shipment Intake", "Cargo Vision Review", "Evidence Rework"],
+      "actStages": ["Shipment Intake", "Evidence Rework"]
+    },
+    {
+      "name": "Cargo Safety Supervisor",
+      "viewStages": ["Load Risk Analysis", "Human Supervisor Approval", "Dispatch Blocked"],
+      "actStages": ["Human Supervisor Approval", "Dispatch Blocked"]
+    },
+    {
+      "name": "Dispatch Coordinator",
+      "viewStages": ["Dispatch Instruction", "Closed"],
+      "actStages": ["Dispatch Instruction"]
+    },
+    {
+      "name": "Case Operator",
+      "viewStages": ["Shipment Intake", "Cargo Vision Review", "Load Risk Analysis", "Human Supervisor Approval", "Dispatch Instruction", "Closed"],
+      "actStages": ["Pause", "Resume", "Retry", "Migrate", "Cancel"]
+    }
+  ],
+  "stages": [
+    {
+      "name": "Shipment Intake",
+      "kind": "primary",
+      "required": true,
+      "sla": "4 business hours",
+      "entryRule": "WHEN CaseCreated",
+      "completeRule": "WHEN Register loading request completes IF shipment_id exists and cargo_items is not empty"
+    },
+    {
+      "name": "Cargo Vision Review",
+      "kind": "primary",
+      "required": true,
+      "sla": "2 business hours",
+      "entryRule": "WHEN Shipment Intake completes",
+      "completeRule": "WHEN Cargo Vision Review completes IF cargoVision.status exists",
+      "reEntryRule": "WHEN Evidence Rework completes IF dock evidence is attached"
+    },
+    {
+      "name": "Load Risk Analysis",
+      "kind": "primary",
+      "required": true,
+      "sla": "1 business hour",
+      "entryRule": "WHEN Cargo Vision Review completes",
+      "completeRule": "WHEN Load Risk Analysis completes IF risk.requiresHumanReview is false",
+      "exitRule": "WHEN Load Risk Analysis completes IF risk.requiresHumanReview is true"
+    },
+    {
+      "name": "Human Supervisor Approval",
+      "kind": "primary",
+      "required": false,
+      "sla": "8 business hours",
+      "entryRule": "WHEN risk.requiresHumanReview changes IF true",
+      "completeRule": "WHEN supervisor approves safer loading plan",
+      "exitRule": "WHEN supervisor rejects or blocks dispatch"
+    },
+    {
+      "name": "Dispatch Instruction",
+      "kind": "primary",
+      "required": true,
+      "sla": "2 business hours",
+      "entryRule": "WHEN Load Risk Analysis or Human Supervisor Approval completes",
+      "completeRule": "WHEN dispatch.finalDecision exists ACTION Complete case"
+    },
+    {
+      "name": "Evidence Rework",
+      "kind": "secondary",
+      "required": false,
+      "sla": "4 business hours",
+      "entryRule": "WHEN risk.detectedIssues changes IF missing_evidence is present",
+      "completeRule": "WHEN dock evidence is captured ACTION Return-to-origin"
+    },
+    {
+      "name": "Dispatch Blocked",
+      "kind": "secondary",
+      "required": false,
+      "sla": "immediate",
+      "entryRule": "WHEN approval.status changes IF rejected or blocked",
+      "completeRule": "ACTION Exit case"
+    },
+    {
+      "name": "Closed",
+      "kind": "primary",
+      "required": true,
+      "sla": "terminal",
+      "entryRule": "WHEN CaseComplete"
+    }
+  ],
+  "taskContracts": [
+    {
+      "stage": "Shipment Intake",
+      "task": "Register loading request",
+      "type": "API Workflow"
+    },
+    {
+      "stage": "Cargo Vision Review",
+      "task": "Cargo Vision Review",
+      "type": "External Agent"
+    },
+    {
+      "stage": "Load Risk Analysis",
+      "task": "Load Risk Analysis",
+      "type": "API Workflow"
+    },
+    {
+      "stage": "Human Supervisor Approval",
+      "task": "Approve safer loading plan",
+      "type": "Human action"
+    },
+    {
+      "stage": "Dispatch Instruction",
+      "task": "Generate dispatch instruction",
+      "type": "API Workflow"
+    }
+  ],
+  "slas": {
+    "caseLevel": "24 business hours",
+    "atRiskThreshold": "80%",
+    "breachAction": "Notify operations management and flag priority"
+  }
+}

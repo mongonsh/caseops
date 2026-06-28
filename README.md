@@ -1,31 +1,69 @@
 # Logithon CaseOps
 
-**Human-approved cargo loading safety with UiPath Maestro.**
+Human-approved cargo loading safety orchestrated with UiPath Maestro Case.
 
-Logithon CaseOps is an AI cargo loading safety case orchestrator for UiPath AgentHack, Track 1: UiPath Maestro Case.
+Logithon CaseOps is a Track 1 UiPath AgentHack project. It models cargo loading as a long-running, exception-heavy case where UiPath Maestro Case coordinates intake, cargo evidence review, risk analysis, supervisor approval, evidence rework, dispatch instructions, SLAs, and audit history.
 
-Core pitch:
+The local app is a working prototype and demo surface. The intended production control plane is UiPath Automation Cloud with Maestro Case.
 
-> Logithon CaseOps uses UiPath Maestro Case to orchestrate cargo inspection, AI load-risk analysis, human supervisor approval, and dispatch instructions for safer, faster logistics operations.
+## Why Maestro Case
 
-This is not only an AI logistics dashboard. It is an enterprise workflow where UiPath Maestro Case is the orchestration and governance layer. AI agents assist with cargo analysis, while humans approve risky loading decisions before dispatch.
+Cargo loading is not a simple linear process. A case may move forward, pause, re-enter evidence review, route to a human supervisor, or block dispatch depending on:
 
-## What The Demo Shows
+- Truck capacity and total cargo weight
+- Left/right and front/rear imbalance
+- Fragile cargo stacked below heavy freight
+- Missing dock photos or low-quality evidence
+- Damaged cargo
+- Hazardous or temperature-sensitive cargo
+- Low AI confidence
+- Human supervisor approval or rejection
 
-- A warehouse receives a cargo loading request.
-- UiPath Maestro creates a case.
-- The coded AI service analyzes cargo list data and uploaded or mock cargo evidence.
-- The deterministic risk engine detects overload, imbalance, fragile stacking, missing evidence, damaged cargo, hazardous cargo, temperature-sensitive cargo, and low-confidence cases.
-- Low-risk shipments are recommended for approval.
-- High-risk or uncertain shipments are routed to a human supervisor.
-- After approval, the system generates dispatch instructions and closes the case with an audit trail.
+That matches UiPath Maestro Case better than a fixed BPMN-only flow because the process is stage-based, exception-heavy, and judgment-driven.
 
-## Tech Stack
+## UiPath Components
 
-- Frontend: React + Vite
-- Backend: Node.js + Express
-- Risk engine: deterministic coded agent simulation
-- Integration target: UiPath Maestro Case and UiPath API Workflows
+Planned UiPath Automation Cloud implementation:
+
+- UiPath Maestro Case
+- Studio Web Case Plan Designer
+- Case App
+- Case Instance Management
+- Action apps or human action tasks
+- API Workflows
+- Data Fabric or Virtual Data Object trigger
+- Integration Service connector trigger
+- Optional Insights dashboard
+
+Local prototype components:
+
+- React + Vite dashboard
+- Express API
+- Deterministic cargo-risk service
+- Live operator-created case intake
+- Maestro-aligned case plan, entity schema, and task I/O contracts
+
+## What Is Real vs. Simulated
+
+Real in this repository:
+
+- Working dashboard and API
+- Live case creation from user-entered cargo data
+- Risk scoring and dispatch logic
+- Human approval endpoint
+- Audit timeline
+- Machine-readable Maestro case plan artifact
+- Task input/output write-back contracts
+
+Simulated until connected to UiPath Automation Cloud:
+
+- Native Maestro Case runtime
+- Generated Case App
+- Action app tasks
+- Data Fabric/VDO trigger
+- UiPath tenant authentication
+- Real warehouse/TMS systems
+- Real computer-vision model
 
 ## Quick Start
 
@@ -34,7 +72,7 @@ npm install
 npm run dev
 ```
 
-Open the dashboard:
+Open:
 
 ```text
 http://localhost:5173
@@ -46,49 +84,139 @@ The API runs at:
 http://localhost:4000
 ```
 
-Run the deterministic risk-engine checks:
+Run tests:
 
 ```bash
 npm test
 ```
 
-Build the frontend:
+Build:
 
 ```bash
 npm run build
 ```
 
-## Sample Cases
+## Keys And Environment
 
-The app includes three hackathon-ready cases:
+No key is required for the local prototype.
 
-| Case | Scenario | Result |
-| --- | --- | --- |
-| LCOPS-1001 | Low-risk normal cargo case | Recommended for dispatch |
-| LCOPS-1002 | High-risk imbalance case | Routed to human approval |
-| LCOPS-1003 | Fragile item stacking risk case | Approved with conditions |
+Copy `.env.example` only when connecting to real services:
 
-Each case includes cargo details, AI analysis output, detected risks, confidence score, recommended action, human approval decision, final status, and audit timeline.
+```bash
+cp .env.example .env
+```
 
-## API Endpoints
+Important values for a connected UiPath deployment:
 
-UiPath Maestro Case or UiPath API Workflows can call these endpoints.
+```env
+UIPATH_BASE_URL=
+UIPATH_ORGANIZATION_NAME=
+UIPATH_TENANT_NAME=
+UIPATH_FOLDER_ID=
+UIPATH_CASE_PROJECT_KEY=
+UIPATH_PAT=
+UIPATH_WEBHOOK_SECRET=
+```
+
+`UIPATH_ORGANIZATION_NAME` is the account/organization logical name in the URL. For example:
+
+```text
+https://staging.uipath.com/hackathon26_1032/portal_/profile
+```
+
+means:
+
+```env
+UIPATH_BASE_URL=https://staging.uipath.com
+UIPATH_ORGANIZATION_NAME=hackathon26_1032
+```
+
+`UIPATH_TENANT_NAME` is the tenant segment in the Maestro URL. For example:
+
+```text
+https://staging.uipath.com/hackathon26_1032/DefaultTenant/maestro_/case-management
+```
+
+means:
+
+```env
+UIPATH_TENANT_NAME=DefaultTenant
+```
+
+For the Personal Access Token screen, use the scopes that match API resources:
+
+- Maestro
+- Orchestrator
+- Data Fabric
+- Apps, if you build Action apps or UiPath Apps screens
+- Integration Service or Resource Catalog, if your case starts from connector events
+
+Studio Web may not appear as a token scope. That is okay: Studio Web is the browser design surface where you create and publish the case plan with your logged-in UiPath account.
+
+For a production External Application OAuth setup, use:
+
+```env
+UIPATH_CLIENT_ID=
+UIPATH_CLIENT_SECRET=
+```
+
+Optional if replacing the deterministic service with model-based cargo vision:
+
+```env
+OPENAI_API_KEY=
+```
+
+## Demo Modes
+
+The app has two demo paths:
+
+- Live Cargo Intake: enter a shipment, cargo manifest, truck capacity, evidence state, and weight distribution. The API creates a new non-sample case and scores it.
+- Run Demo Scenario: replays a high-risk sample case through the end-to-end Maestro-style API flow.
+
+The sample cases are intentionally labeled `Sample`. Operator-created cases are labeled `Live`.
+
+## Maestro Artifacts
+
+Primary artifacts:
+
+- `docs/maestro-case-plan.md`
+- `uipath/maestro-case-plan.json`
+- `docs/demo-script.md`
+- `docs/devpost-submission-outline.md`
+- `.env.example`
+
+Runtime artifact endpoints:
+
+```text
+GET /api/maestro/case-plan
+GET /api/maestro/entity-schema
+GET /api/maestro/task-contracts
+```
+
+## API Contract
+
+UiPath Maestro Case or UiPath API Workflows can call:
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | GET | `/health` | Service health check |
-| GET | `/api/cases` | List all sample cases |
-| GET | `/api/cases/{case_id}` | Get a single case |
-| POST | `/api/analyze-cargo` | Run cargo vision and metadata analysis |
+| GET | `/api/cases` | List cases |
+| GET | `/api/cases/{case_id}` | Get one case |
+| POST | `/api/live-cases` | Create a live operator-entered case |
+| POST | `/api/uipath/case-created` | Register a Maestro-created case |
+| POST | `/api/uipath/stage-update` | Sync stage changes |
+| POST | `/api/analyze-cargo` | Run cargo/evidence analysis |
 | POST | `/api/risk-score` | Return structured risk score |
 | POST | `/api/human-decision` | Record supervisor approval decision |
 | POST | `/api/dispatch-instructions` | Generate dispatch instruction |
-| POST | `/api/uipath/case-created` | Register a Maestro-created case |
-| POST | `/api/uipath/stage-update` | Sync Maestro stage changes |
 
-## UiPath Maestro Case Integration Guide
+## Case Plan Summary
 
-Recommended Maestro Case stages:
+Case entity: `CargoLoadSafetyCase`
+
+Case key: external key from `shipment_id`, with `LCOPS` as system-prefix fallback.
+
+Primary stages:
 
 1. Shipment Intake
 2. Cargo Vision Review
@@ -97,276 +225,44 @@ Recommended Maestro Case stages:
 5. Dispatch Instruction
 6. Closed
 
-Recommended workflow:
+Secondary stages:
 
-1. When a case is created, call `POST /api/uipath/case-created`.
-2. During AI review, call `POST /api/analyze-cargo`.
-3. During risk scoring, call `POST /api/risk-score`.
-4. If review is required, route to Action Center or human supervisor approval.
-5. When human approval is completed, call `POST /api/human-decision`.
-6. Before closing the case, call `POST /api/dispatch-instructions`.
-7. Sync final status with `POST /api/uipath/stage-update`.
+- Evidence Rework
+- Dispatch Blocked
 
-## Architecture
+Core task workers:
 
-```mermaid
-flowchart LR
-  A[Cargo request / warehouse data] --> B[UiPath Maestro Case]
-  B --> C[Logithon coded AI cargo-risk service]
-  C --> D[Risk analysis]
-  D --> E{Human approval required?}
-  E -- Yes --> F[Action Center human approval]
-  E -- No --> G[Dispatch instruction]
-  F --> G
-  G --> H[Case closed with audit trail]
-```
+- API Workflow: register loading request
+- External agent/API: cargo vision review
+- API Workflow: load risk analysis
+- Human action: supervisor approval
+- API Workflow: dispatch instruction
 
-## Sample Request And Response JSON
+## Judging Alignment
 
-### Case Created
+For UiPath AgentHack, this project targets:
 
-`POST /api/uipath/case-created`
+- Runner-up of UiPath Maestro Case
+- Honorable Mention of UiPath Maestro Case
+- Best Demo / Presentation
 
-Request:
+It is designed to score well on:
 
-```json
-{
-  "case_id": "LCOPS-1002",
-  "uipath_case_id": "MAESTRO-CASE-2088",
-  "shipment_id": "SHP-LAX-2088",
-  "stage": "Shipment Intake"
-}
-```
+- Business impact: unsafe dispatch prevention and accountable supervisor governance
+- Platform usage: Maestro Case as the orchestration layer, with people, agents, API workflows, Data Fabric, and Case App concepts
+- Technical execution: working API, live intake, deterministic risk engine, edge-case handling, and audit trail
+- Completeness: runnable prototype, docs, setup, demo script, and submission outline
+- Presentation: a 5-minute live-created case demo instead of only slides
+- Coding agent bonus: Codex-built service and artifacts are documented
 
-Response:
+## Sources Used
 
-```json
-{
-  "case_id": "LCOPS-1002",
-  "shipment_id": "SHP-LAX-2088",
-  "stage": "Shipment Intake",
-  "risk_score": 94,
-  "risk_level": "High",
-  "requires_human_review": true,
-  "approval_status": "Pending supervisor",
-  "audit_events": []
-}
-```
+- UiPath Maestro docs: [How Maestro fits into UiPath](https://docs.uipath.com/maestro/automation-cloud/latest/user-guide/maestro-integration-with-the-uipath-ecosystem)
+- UiPath Maestro docs: [Introduction to Maestro Case](https://docs.uipath.com/maestro/automation-cloud/latest/user-guide/introduction-to-maestro-case)
+- UiPath Maestro docs: [Maestro Case lifecycle](https://docs.uipath.com/maestro/automation-cloud/latest/user-guide/maestro-case-lifecycle-from-event-trigger-to-app-experience)
+- UiPath Maestro docs: [Task I/O and write-back contracts](https://docs.uipath.com/maestro/automation-cloud/latest/user-guide/how-to-establish-task-io-and-write-back-contracts)
+- UiPath AgentHack Devpost page: [uipath-agenthack.devpost.com](https://uipath-agenthack.devpost.com/)
 
-### Analyze Cargo
+## License
 
-`POST /api/analyze-cargo`
-
-Request:
-
-```json
-{
-  "case_id": "LCOPS-1002"
-}
-```
-
-Response:
-
-```json
-{
-  "case_id": "LCOPS-1002",
-  "shipment_id": "SHP-LAX-2088",
-  "stage": "Load Risk Analysis",
-  "risk_score": 94,
-  "risk_level": "High",
-  "detected_issues": [
-    {
-      "id": "near_capacity",
-      "severity": "Medium",
-      "title": "Truck is loaded above 90 percent of rated capacity"
-    },
-    {
-      "id": "weight_imbalance",
-      "severity": "High",
-      "title": "Weight distribution is outside safe balance tolerance"
-    }
-  ],
-  "confidence_score": 0.96,
-  "recommended_action": "Hold dispatch and request supervisor approval with a safer loading plan.",
-  "requires_human_review": true
-}
-```
-
-### Risk Score
-
-`POST /api/risk-score`
-
-Request:
-
-```json
-{
-  "case_id": "LCOPS-1003"
-}
-```
-
-Response:
-
-```json
-{
-  "case_id": "LCOPS-1003",
-  "shipment_id": "SHP-SEA-7731",
-  "stage": "Load Risk Analysis",
-  "risk_score": 100,
-  "risk_level": "High",
-  "confidence_score": 0.6,
-  "requires_human_review": true,
-  "why_human_approval_required": [
-    "Fragile cargo is stacked below heavy freight",
-    "Cargo image or loading evidence is missing",
-    "Damaged cargo detected in shipment metadata",
-    "Hazardous cargo requires governed approval",
-    "Temperature-sensitive cargo requires handling confirmation"
-  ]
-}
-```
-
-### Human Decision
-
-`POST /api/human-decision`
-
-Request:
-
-```json
-{
-  "case_id": "LCOPS-1002",
-  "decision": "approved_with_conditions",
-  "supervisor": "Action Center Supervisor",
-  "notes": "Approved after rebalancing dense pallets toward the center line.",
-  "safer_loading_plan": [
-    "Move two pump pallets from left wall to center bay.",
-    "Capture dock photo and axle-weight confirmation before seal."
-  ]
-}
-```
-
-Response:
-
-```json
-{
-  "case_id": "LCOPS-1002",
-  "shipment_id": "SHP-LAX-2088",
-  "stage": "Dispatch Instruction",
-  "approval_status": "Approved with conditions",
-  "human_approval_decision": "Approved after rebalancing dense pallets toward the center line.",
-  "safer_loading_plan": [
-    "Move two pump pallets from left wall to center bay.",
-    "Capture dock photo and axle-weight confirmation before seal."
-  ]
-}
-```
-
-### Dispatch Instructions
-
-`POST /api/dispatch-instructions`
-
-Request:
-
-```json
-{
-  "case_id": "LCOPS-1002"
-}
-```
-
-Response:
-
-```json
-{
-  "instruction_id": "DISP-LCOPS-1002-12345",
-  "case_id": "LCOPS-1002",
-  "shipment_id": "SHP-LAX-2088",
-  "final_decision": "Dispatch approved with safer loading plan",
-  "dispatch_instruction": "Dispatch may proceed after the listed loading controls are confirmed and attached to the audit trail.",
-  "loading_controls": [
-    "Rebalance the heaviest pallets toward the center and forward third.",
-    "Confirm cargo securement, seal number, driver acknowledgement, and departure timestamp."
-  ],
-  "close_case": true
-}
-```
-
-### Stage Update
-
-`POST /api/uipath/stage-update`
-
-Request:
-
-```json
-{
-  "case_id": "LCOPS-1002",
-  "stage": "Closed",
-  "status": "Complete"
-}
-```
-
-Response:
-
-```json
-{
-  "case_id": "LCOPS-1002",
-  "stage": "Closed",
-  "current_stage": "Closed",
-  "approval_status": "Approved with conditions",
-  "final_dispatch_decision": "Dispatch approved with safer loading plan"
-}
-```
-
-## Deterministic AI Agent Simulation
-
-The coded cargo-risk service simulates an AI agent with transparent rules:
-
-- If total weight exceeds truck capacity, risk is high.
-- If total weight is above 90 percent of truck capacity, risk is medium.
-- If fragile items are stacked under heavy items, risk is high.
-- If weight distribution is left/right or front/rear unbalanced, risk is medium or high.
-- If cargo image or evidence is missing, risk is medium.
-- If damaged cargo is detected in metadata, risk is high.
-- If hazardous cargo is present, require human review.
-- If temperature-sensitive cargo is present, require human review.
-- If confidence is low, require human review.
-
-The service returns detected risks, confidence score, risk level, recommendation, human-review reasons, and safer loading suggestions.
-
-## Use Of Coding Agents
-
-Codex was used to build:
-
-- The coded cargo risk analysis service
-- API endpoints
-- Frontend dashboard
-- Mock logistics data
-- UiPath integration documentation
-- Demo script
-
-Codex builds specialized coded agents and services. UiPath Maestro remains the enterprise orchestration and governance layer.
-
-## 5-Minute Demo Script
-
-Use the dashboard button labeled `Run Demo Scenario`.
-
-1. Introduce Logithon CaseOps as human-approved cargo loading safety orchestrated by UiPath Maestro Case.
-2. Select `LCOPS-1002`, the high-risk imbalance case.
-3. Run the demo scenario.
-4. Narrate the stage movement: shipment intake, Maestro case creation, cargo analysis, risk scoring, human approval, dispatch instruction, case closure.
-5. Show that the coded agent detects risk, but the supervisor approves the safer loading plan.
-6. Close on the audit trail and API contract for UiPath workflows.
-
-## Project Structure
-
-```text
-backend/
-  data/cases.js              Sample cargo cases
-  riskEngine.js              Deterministic coded cargo-risk service
-  server.js                  Express API for UiPath and dashboard
-  tests/riskEngine.test.js   Rule checks
-src/
-  App.jsx                    React command-center dashboard
-  main.jsx                   React entrypoint
-  styles.css                 Dark enterprise UI
-docs/
-  demo-script.md             Hackathon demo narration
-```
+MIT

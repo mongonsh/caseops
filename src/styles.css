@@ -123,7 +123,8 @@ button {
 .api-pill,
 .primary-button,
 .status-chip,
-.risk-badge {
+.risk-badge,
+.source-chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -164,6 +165,10 @@ button {
 .primary-button:disabled {
   cursor: wait;
   opacity: 0.72;
+}
+
+.form-button {
+  min-width: 164px;
 }
 
 .mission-hero {
@@ -364,14 +369,14 @@ button {
 
 .case-strip {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 12px;
   margin-bottom: 18px;
 }
 
 .case-tile {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr auto auto;
   align-items: center;
   gap: 12px;
   min-height: 78px;
@@ -433,12 +438,33 @@ button {
 }
 
 .risk-badge,
-.status-chip {
+.status-chip,
+.source-chip {
   min-height: 30px;
   padding: 0 10px;
   font-size: 0.76rem;
   font-weight: 900;
   text-transform: uppercase;
+}
+
+.source-chip.sample {
+  border: 1px solid rgba(143, 180, 206, 0.28);
+  color: var(--steel);
+  background: rgba(143, 180, 206, 0.1);
+}
+
+.source-chip.live {
+  border: 1px solid rgba(34, 211, 182, 0.36);
+  color: var(--teal);
+  background: rgba(34, 211, 182, 0.11);
+}
+
+.operator-band {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(360px, 0.75fr);
+  gap: 18px;
+  margin-bottom: 18px;
+  align-items: stretch;
 }
 
 .dashboard-grid {
@@ -528,9 +554,134 @@ button {
 .contract-list,
 .demo-steps,
 .demo-log,
-.bonus-grid {
+.bonus-grid,
+.plan-list {
   display: grid;
   gap: 10px;
+}
+
+.live-form {
+  display: grid;
+  gap: 12px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.form-grid.compact {
+  grid-template-columns: repeat(4, minmax(90px, 1fr));
+}
+
+.live-form label,
+.wide-label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.live-form input,
+.live-form select,
+.live-form textarea {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 10px;
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.18);
+  outline: none;
+}
+
+.live-form textarea {
+  resize: vertical;
+  min-height: 104px;
+  line-height: 1.45;
+}
+
+.live-form input:focus,
+.live-form select:focus,
+.live-form textarea:focus {
+  border-color: rgba(34, 211, 182, 0.7);
+  box-shadow: 0 0 0 3px rgba(34, 211, 182, 0.11);
+}
+
+.toggle-row,
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.toggle-row label {
+  display: inline-flex;
+  align-items: center;
+  grid-auto-flow: column;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.toggle-row input[type="checkbox"] {
+  width: 16px;
+  min-height: 16px;
+  accent-color: var(--teal);
+}
+
+.toggle-row select {
+  min-width: 178px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.form-actions span {
+  min-width: 0;
+  color: #c9d5dc;
+  overflow-wrap: anywhere;
+}
+
+.plan-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.plan-grid .metric {
+  min-height: 96px;
+}
+
+.plan-list {
+  margin-top: 14px;
+}
+
+.plan-list div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.plan-list strong,
+.plan-list span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.plan-list span {
+  color: var(--muted);
+  font-size: 0.82rem;
 }
 
 .cargo-list {
@@ -839,6 +990,7 @@ code {
 
 @media (max-width: 1180px) {
   .mission-hero,
+  .operator-band,
   .dashboard-grid,
   .lower-grid {
     grid-template-columns: 1fr 1fr;
@@ -866,6 +1018,7 @@ code {
 
   .topbar,
   .mission-hero,
+  .operator-band,
   .dashboard-grid,
   .lower-grid,
   .case-strip {
@@ -892,7 +1045,10 @@ code {
 
   .mission-stats,
   .info-grid,
-  .bonus-grid {
+  .bonus-grid,
+  .form-grid,
+  .form-grid.compact,
+  .plan-grid {
     grid-template-columns: 1fr;
   }
 
@@ -911,13 +1067,15 @@ code {
     grid-template-columns: auto 1fr;
   }
 
-  .risk-badge {
+  .risk-badge,
+  .source-chip {
     grid-column: 2;
     justify-self: start;
   }
 
   .cargo-row,
-  .demo-log div {
+  .demo-log div,
+  .plan-list div {
     grid-template-columns: 1fr;
   }
 }

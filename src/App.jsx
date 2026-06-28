@@ -7,15 +7,19 @@ import {
   CheckCircle2,
   ClipboardCheck,
   Clock,
+  Database,
   FileText,
   Gauge,
   GitBranch,
+  KeyRound,
+  Layers,
   Package,
   Play,
+  PlusCircle,
   Route,
-  Scale,
   ShieldCheck,
   Truck,
+  UploadCloud,
   UserCheck,
   Workflow
 } from "lucide-react";
@@ -72,7 +76,7 @@ const demoSteps = [
   }
 ];
 
-const maestroStages = [
+const fallbackStages = [
   "Shipment Intake",
   "Cargo Vision Review",
   "Load Risk Analysis",
@@ -82,21 +86,42 @@ const maestroStages = [
 ];
 
 const apiContract = [
+  ["Live case intake", "POST /api/live-cases"],
   ["Case created", "POST /api/uipath/case-created"],
   ["AI review", "POST /api/analyze-cargo"],
   ["Risk scoring", "POST /api/risk-score"],
   ["Approval", "POST /api/human-decision"],
   ["Dispatch", "POST /api/dispatch-instructions"],
-  ["Stage sync", "POST /api/uipath/stage-update"]
+  ["Case plan", "GET /api/maestro/case-plan"]
 ];
 
 const bonusItems = [
-  "Coded cargo analysis service",
-  "Generated API endpoints",
-  "Risk scoring logic",
-  "UiPath integration contract",
-  "Human approval workflow support"
+  "UiPath-ready case plan artifact",
+  "Explicit case entity schema",
+  "Task I/O write-back contracts",
+  "Live operator-created cases",
+  "Human approval and rework path",
+  "Codex-built risk service"
 ];
+
+function buildLiveForm() {
+  const suffix = Date.now().toString().slice(-5);
+  return {
+    shipment_id: `SHP-LIVE-${suffix}`,
+    title: "Live dock safety check",
+    truck_type: "53 ft dry van",
+    truck_capacity_kg: "18000",
+    evidence_state: "attached",
+    damaged_cargo_detected: false,
+    manual_entry_only: true,
+    left_kg: "9800",
+    right_kg: "5200",
+    front_kg: "8400",
+    rear_kg: "6600",
+    cargo_text:
+      "Industrial pump pallet,4,1750,heavy,floor,left-wall\nMotor crate,2,1450,heavy,floor,left-wall\nElectronics carton,14,52,fragile,top,center"
+  };
+}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -110,6 +135,39 @@ function levelClass(level) {
   return String(level || "Low").toLowerCase();
 }
 
+function parseCargoLines(value) {
+  return String(value || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line, index) => {
+      const [name, quantity, unitWeight, rawFlags = "", stackPosition = "floor", stackGroup = "main"] =
+        line.split(",").map((part) => part.trim());
+      const flags = new Set(
+        rawFlags
+          .toLowerCase()
+          .split(/[| ]/)
+          .map((flag) => flag.trim())
+          .filter(Boolean)
+      );
+
+      return {
+        sku: `LIVE-${String(index + 1).padStart(3, "0")}`,
+        name: name || `Cargo item ${index + 1}`,
+        quantity: Number(quantity) || 1,
+        unit_weight_kg: Number(unitWeight) || 0,
+        fragile: flags.has("fragile"),
+        heavy: flags.has("heavy"),
+        hazardous: flags.has("hazmat") || flags.has("hazardous"),
+        damaged: flags.has("damaged"),
+        temperature_sensitive: flags.has("temp") || flags.has("temperature"),
+        stack_position: stackPosition || "floor",
+        stack_group: stackGroup || "main"
+      };
+    })
+    .filter((item) => item.unit_weight_kg > 0);
+}
+
 function App() {
   const [cases, setCases] = useState([]);
   const [selectedCaseId, setSelectedCaseId] = useState("");
@@ -117,30 +175,53 @@ function App() {
   const [demoStep, setDemoStep] = useState(-1);
   const [demoLog, setDemoLog] = useState([]);
   const [demoRunning, setDemoRunning] = useState(false);
+  const [maestroPlan, setMaestroPlan] = useState(null);
+  const [liveForm, setLiveForm] = useState(buildLiveForm);
+  const [liveCaseStatus, setLiveCaseStatus] = useState("");
 
   const selectedCase = useMemo(
     () => cases.find((caseRecord) => caseRecord.case_id === selectedCaseId) || cases[0],
     [cases, selectedCaseId]
   );
 
+  const stageNames = useMemo(
+    () => maestroPlan?.case_plan?.stages?.map((stage) => stage.name) || fallbackStages,
+    [maestroPlan]
+  );
+
+  const planStats = useMemo(() => {
+    const stages = maestroPlan?.case_plan?.stages || [];
+    const taskContracts = maestroPlan?.task_contracts || [];
+    return {
+      stages: stages.length || fallbackStages.length,
+      tasks: taskContracts.length,
+      personas: maestroPlan?.case_plan?.personas?.length || 0,
+      triggers: maestroPlan?.case_plan?.triggerSources?.length || 0
+    };
+  }, [maestroPlan]);
+
   const summary = useMemo(() => {
     const highRisk = cases.filter((caseRecord) => caseRecord.risk_level === "High").length;
     const humanQueue = cases.filter((caseRecord) => caseRecord.requires_human_review).length;
     const totalWeight = cases.reduce((sum, caseRecord) => sum + caseRecord.total_weight_kg, 0);
+    const liveCases = cases.filter((caseRecord) => !caseRecord.is_sample).length;
 
     return {
       activeCases: cases.length,
       highRisk,
       humanQueue,
-      totalWeight
+      totalWeight,
+      liveCases
     };
   }, [cases]);
 
-  async function loadCases() {
+  async function loadCases(nextSelectedCaseId) {
     const response = await fetch("/api/cases");
     const payload = await response.json();
     setCases(payload.cases);
-    setSelectedCaseId((current) => current || payload.cases[1]?.case_id || payload.cases[0]?.case_id);
+    setSelectedCaseId(
+      (current) => nextSelectedCaseId || current || payload.cases[1]?.case_id || payload.cases[0]?.case_id
+    );
   }
 
   useEffect(() => {
@@ -152,6 +233,10 @@ function App() {
         if (!health.ok) throw new Error("health check failed");
         if (mounted) setApiStatus("online");
         await loadCases();
+        const planResponse = await fetch("/api/maestro/case-plan");
+        if (planResponse.ok && mounted) {
+          setMaestroPlan(await planResponse.json());
+        }
       } catch (error) {
         if (mounted) setApiStatus("offline");
       }
@@ -162,6 +247,63 @@ function App() {
       mounted = false;
     };
   }, []);
+
+  function updateLiveForm(field, value) {
+    setLiveForm((current) => ({ ...current, [field]: value }));
+  }
+
+  async function createLiveCase(event) {
+    event.preventDefault();
+    const cargoItems = parseCargoLines(liveForm.cargo_text);
+
+    if (cargoItems.length === 0) {
+      setLiveCaseStatus("Add at least one cargo line with a positive weight.");
+      return;
+    }
+
+    setLiveCaseStatus("Creating live case...");
+    const payload = {
+      shipment_id: liveForm.shipment_id,
+      title: liveForm.title,
+      truck_type: liveForm.truck_type,
+      truck_capacity_kg: Number(liveForm.truck_capacity_kg),
+      cargo_items: cargoItems,
+      weight_distribution: {
+        left_kg: Number(liveForm.left_kg),
+        right_kg: Number(liveForm.right_kg),
+        front_kg: Number(liveForm.front_kg),
+        rear_kg: Number(liveForm.rear_kg)
+      },
+      evidence: {
+        image_uploaded: liveForm.evidence_state === "attached",
+        photo_quality: liveForm.evidence_state === "attached" ? "operator-attested" : "missing",
+        vision_notes: "Created through the live intake panel."
+      },
+      metadata: {
+        damaged_cargo_detected: liveForm.damaged_cargo_detected,
+        manual_entry_only: liveForm.manual_entry_only
+      }
+    };
+
+    try {
+      const response = await fetch("/api/live-cases", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const created = await response.json();
+      if (!response.ok) throw new Error(created.message || "Live case creation failed.");
+
+      await loadCases(created.case_id);
+      setLiveCaseStatus(`Created ${created.case_id}: ${created.risk_level} risk, score ${created.risk_score}.`);
+      setLiveForm((current) => ({
+        ...current,
+        shipment_id: `SHP-LIVE-${Date.now().toString().slice(-5)}`
+      }));
+    } catch (error) {
+      setLiveCaseStatus(error.message);
+    }
+  }
 
   async function runDemoScenario() {
     setSelectedCaseId("LCOPS-1002");
@@ -192,7 +334,7 @@ function App() {
             entryIndex === 0 ? { ...entry, status: "Done" } : entry
           )
         );
-        await loadCases();
+        await loadCases("LCOPS-1002");
       } catch (error) {
         setDemoLog((current) =>
           current.map((entry, entryIndex) =>
@@ -227,7 +369,7 @@ function App() {
             <ShieldCheck size={24} />
           </div>
           <div>
-            <p className="eyebrow">Human-approved cargo loading safety</p>
+            <p className="eyebrow">Track 1: UiPath Maestro Case</p>
             <h1>Logithon CaseOps</h1>
           </div>
         </div>
@@ -245,23 +387,23 @@ function App() {
 
       <section className="mission-hero" aria-label="Mission dashboard">
         <div className="mission-copy">
-          <p className="section-kicker">Mission dashboard</p>
-          <h2>AI cargo loading safety workflow orchestrated by UiPath Maestro Case.</h2>
+          <p className="section-kicker">Maestro-governed cargo exceptions</p>
+          <h2>Case management for unsafe or uncertain cargo loading decisions.</h2>
           <p>
-            Enterprise case orchestration for cargo intake, AI vision review, load-risk analysis,
-            human supervisor approval, and dispatch instructions.
+            UiPath Maestro Case owns the lifecycle, stage rules, human approval, SLA visibility,
+            and audit trail. The Codex-built cargo-risk service acts as an external task worker.
           </p>
           <div className="mission-stats">
             <Metric label="Active cases" value={summary.activeCases} icon={<Workflow />} />
+            <Metric label="Live cases" value={summary.liveCases} icon={<Database />} />
             <Metric label="High risk" value={summary.highRisk} icon={<AlertTriangle />} />
             <Metric label="Human queue" value={summary.humanQueue} icon={<UserCheck />} />
-            <Metric label="Total cargo" value={formatKg(summary.totalWeight)} icon={<Scale />} />
           </div>
         </div>
         <CargoCommandVisual caseRecord={selectedCase} activeStep={demoStep} />
       </section>
 
-      <section className="case-strip" aria-label="Sample cases">
+      <section className="case-strip" aria-label="Cargo cases">
         {cases.map((caseRecord) => (
           <button
             className={`case-tile ${caseRecord.case_id === selectedCase.case_id ? "selected" : ""}`}
@@ -273,11 +415,146 @@ function App() {
               <strong>{caseRecord.case_id}</strong>
               <small>{caseRecord.title}</small>
             </span>
+            <span className={`source-chip ${caseRecord.is_sample ? "sample" : "live"}`}>
+              {caseRecord.is_sample ? "Sample" : "Live"}
+            </span>
             <span className={`risk-badge ${levelClass(caseRecord.risk_level)}`}>
               {caseRecord.risk_level}
             </span>
           </button>
         ))}
+      </section>
+
+      <section className="operator-band">
+        <Panel title="Live cargo intake" icon={<PlusCircle />}>
+          <form className="live-form" onSubmit={createLiveCase}>
+            <div className="form-grid">
+              <label>
+                <span>Shipment ID</span>
+                <input
+                  value={liveForm.shipment_id}
+                  onChange={(event) => updateLiveForm("shipment_id", event.target.value)}
+                />
+              </label>
+              <label>
+                <span>Case title</span>
+                <input
+                  value={liveForm.title}
+                  onChange={(event) => updateLiveForm("title", event.target.value)}
+                />
+              </label>
+              <label>
+                <span>Truck type</span>
+                <input
+                  value={liveForm.truck_type}
+                  onChange={(event) => updateLiveForm("truck_type", event.target.value)}
+                />
+              </label>
+              <label>
+                <span>Capacity kg</span>
+                <input
+                  type="number"
+                  value={liveForm.truck_capacity_kg}
+                  onChange={(event) => updateLiveForm("truck_capacity_kg", event.target.value)}
+                />
+              </label>
+            </div>
+            <label className="wide-label">
+              <span>Cargo manifest</span>
+              <textarea
+                value={liveForm.cargo_text}
+                onChange={(event) => updateLiveForm("cargo_text", event.target.value)}
+                rows={4}
+              />
+            </label>
+            <div className="form-grid compact">
+              <label>
+                <span>Left kg</span>
+                <input
+                  type="number"
+                  value={liveForm.left_kg}
+                  onChange={(event) => updateLiveForm("left_kg", event.target.value)}
+                />
+              </label>
+              <label>
+                <span>Right kg</span>
+                <input
+                  type="number"
+                  value={liveForm.right_kg}
+                  onChange={(event) => updateLiveForm("right_kg", event.target.value)}
+                />
+              </label>
+              <label>
+                <span>Front kg</span>
+                <input
+                  type="number"
+                  value={liveForm.front_kg}
+                  onChange={(event) => updateLiveForm("front_kg", event.target.value)}
+                />
+              </label>
+              <label>
+                <span>Rear kg</span>
+                <input
+                  type="number"
+                  value={liveForm.rear_kg}
+                  onChange={(event) => updateLiveForm("rear_kg", event.target.value)}
+                />
+              </label>
+            </div>
+            <div className="toggle-row">
+              <label>
+                <UploadCloud size={16} />
+                <select
+                  value={liveForm.evidence_state}
+                  onChange={(event) => updateLiveForm("evidence_state", event.target.value)}
+                >
+                  <option value="attached">Evidence attached</option>
+                  <option value="missing">Evidence missing</option>
+                </select>
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={liveForm.damaged_cargo_detected}
+                  onChange={(event) => updateLiveForm("damaged_cargo_detected", event.target.checked)}
+                />
+                Damaged cargo
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={liveForm.manual_entry_only}
+                  onChange={(event) => updateLiveForm("manual_entry_only", event.target.checked)}
+                />
+                Manual entry
+              </label>
+            </div>
+            <div className="form-actions">
+              <button className="primary-button form-button" type="submit">
+                <PlusCircle size={17} />
+                Create Live Case
+              </button>
+              {liveCaseStatus && <span>{liveCaseStatus}</span>}
+            </div>
+          </form>
+        </Panel>
+
+        <Panel title="Maestro case plan" icon={<Layers />}>
+          <div className="plan-grid">
+            <Metric label="Stages" value={planStats.stages} icon={<GitBranch />} />
+            <Metric label="Task contracts" value={planStats.tasks} icon={<ClipboardCheck />} />
+            <Metric label="Personas" value={planStats.personas} icon={<UserCheck />} />
+            <Metric label="Triggers" value={planStats.triggers} icon={<KeyRound />} />
+          </div>
+          <div className="plan-list">
+            {(maestroPlan?.case_plan?.triggerSources || []).map((trigger) => (
+              <div key={trigger.source}>
+                <strong>{trigger.source}</strong>
+                <span>{trigger.endpoint || trigger.entity}</span>
+              </div>
+            ))}
+          </div>
+        </Panel>
       </section>
 
       <section className="dashboard-grid">
@@ -294,17 +571,17 @@ function App() {
           <InfoGrid
             items={[
               ["Shipment ID", selectedCase.shipment_id],
+              ["Maestro key", selectedCase.maestro_case_key],
+              ["Source", selectedCase.case_source],
               ["Truck/container type", selectedCase.truck_type],
               ["Cargo count", selectedCase.cargo_count],
               ["Total weight", formatKg(selectedCase.total_weight_kg)],
               ["Truck capacity", formatKg(selectedCase.truck_capacity_kg)],
-              ["Fragile items", selectedCase.fragile_items],
-              ["Heavy items", selectedCase.heavy_items],
               ["SLA status", selectedCase.sla_status]
             ]}
           />
           <div className="cargo-list">
-            {selectedCase.cargo_items.map((item) => (
+            {(selectedCase.cargo_items || []).map((item) => (
               <div className="cargo-row" key={item.sku}>
                 <span>
                   <strong>{item.name}</strong>
@@ -345,7 +622,7 @@ function App() {
               <span style={{ width: `${selectedCase.risk_score}%` }} />
             </div>
           </div>
-          <IssueList issues={selectedCase.detected_issues} />
+          <IssueList issues={selectedCase.detected_issues || []} />
           <div className="recommendation">
             <ClipboardCheck size={18} />
             <span>{selectedCase.recommended_action}</span>
@@ -362,7 +639,7 @@ function App() {
             ]}
           />
           <div className="approval-lane">
-            {selectedCase.why_human_approval_required.length > 0 ? (
+            {(selectedCase.why_human_approval_required || []).length > 0 ? (
               selectedCase.why_human_approval_required.map((reason) => (
                 <span key={reason}>{reason}</span>
               ))
@@ -375,7 +652,7 @@ function App() {
         <Panel title="Dispatch instruction" icon={<Route />}>
           <p className="instruction">{selectedCase.dispatch_instruction}</p>
           <div className="suggestion-list">
-            {selectedCase.safer_loading_suggestion.map((suggestion) => (
+            {(selectedCase.safer_loading_suggestion || []).map((suggestion) => (
               <div key={suggestion}>
                 <CheckCircle2 size={16} />
                 <span>{suggestion}</span>
@@ -386,7 +663,7 @@ function App() {
 
         <Panel title="UiPath Maestro integration" icon={<GitBranch />}>
           <div className="stage-rail">
-            {maestroStages.map((stage) => (
+            {stageNames.map((stage) => (
               <div
                 className={`stage-node ${stage === selectedCase.current_stage ? "active" : ""}`}
                 key={stage}
@@ -410,7 +687,7 @@ function App() {
       <section className="lower-grid">
         <Panel title="Audit timeline" icon={<Clock />}>
           <div className="timeline">
-            {selectedCase.audit_events.map((event, index) => (
+            {(selectedCase.audit_events || []).map((event, index) => (
               <div className="timeline-item" key={`${event.timestamp}-${index}`}>
                 <span className="timeline-pin" />
                 <div>
@@ -455,8 +732,8 @@ function App() {
             ))}
           </div>
           <p className="bonus-copy">
-            Codex built the specialized coded service and demo assets. UiPath Maestro remains the
-            enterprise orchestration and governance layer.
+            Codex built the coded cargo-risk service and submission artifacts. UiPath Maestro Case
+            remains the orchestration and governance layer.
           </p>
         </Panel>
       </section>

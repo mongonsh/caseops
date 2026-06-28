@@ -5,6 +5,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { sampleCases } from "./data/cases.js";
+import {
+  caseEntitySchema,
+  maestroCasePlan,
+  submissionChecklist,
+  taskContracts
+} from "./maestroCasePlan.js";
 import { analyzeCargo, createDispatchInstruction } from "./riskEngine.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -32,6 +38,84 @@ function addAuditEvent(caseRecord, actor, event) {
     actor,
     event
   });
+}
+
+function toNumber(value, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function normalizeCargoItem(item, index) {
+  return {
+    sku: item.sku || `LIVE-${String(index + 1).padStart(3, "0")}`,
+    name: item.name || `Cargo item ${index + 1}`,
+    quantity: toNumber(item.quantity, 1),
+    unit_weight_kg: toNumber(item.unit_weight_kg ?? item.weight_kg, 0),
+    fragile: Boolean(item.fragile),
+    heavy: Boolean(item.heavy),
+    hazardous: Boolean(item.hazardous),
+    damaged: Boolean(item.damaged),
+    temperature_sensitive: Boolean(item.temperature_sensitive),
+    stack_position: item.stack_position || "floor",
+    stack_group: item.stack_group || "main"
+  };
+}
+
+function normalizeLiveCasePayload(payload) {
+  const incoming = payload.case || payload;
+  const cargoItems = Array.isArray(incoming.cargo_items)
+    ? incoming.cargo_items.map(normalizeCargoItem).filter((item) => item.unit_weight_kg > 0)
+    : [];
+
+  if (cargoItems.length === 0) {
+    const error = new Error("At least one cargo item with weight is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const now = Date.now().toString().slice(-6);
+  const shipmentId = incoming.shipment_id || `SHP-LIVE-${now}`;
+  const caseId = incoming.case_id || `LCOPS-${now}`;
+
+  return {
+    case_id: caseId,
+    shipment_id: shipmentId,
+    uipath_case_id: incoming.uipath_case_id || null,
+    title: incoming.title || "Live cargo loading safety case",
+    case_source: incoming.case_source || "Live intake",
+    is_sample: false,
+    truck_type: incoming.truck_type || "Unspecified truck",
+    truck_capacity_kg: toNumber(incoming.truck_capacity_kg, 0),
+    sla_status: "On track",
+    stage: "Shipment Intake",
+    current_stage: "Shipment Intake",
+    approval_status: "Pending",
+    human_approval_decision: "Awaiting analysis",
+    cargo_items: cargoItems,
+    weight_distribution: {
+      left_kg: toNumber(incoming.weight_distribution?.left_kg ?? incoming.left_kg, 0),
+      right_kg: toNumber(incoming.weight_distribution?.right_kg ?? incoming.right_kg, 0),
+      front_kg: toNumber(incoming.weight_distribution?.front_kg ?? incoming.front_kg, 0),
+      rear_kg: toNumber(incoming.weight_distribution?.rear_kg ?? incoming.rear_kg, 0)
+    },
+    evidence: {
+      image_uploaded: incoming.evidence?.image_uploaded === true || incoming.image_uploaded === true,
+      photo_quality: incoming.evidence?.photo_quality || incoming.photo_quality || "operator-entered",
+      photo_url: incoming.evidence?.photo_url || incoming.photo_url || null,
+      vision_notes:
+        incoming.evidence?.vision_notes ||
+        incoming.vision_notes ||
+        "Live case created from operator-entered cargo data."
+    },
+    metadata: {
+      damaged_cargo_detected: Boolean(
+        incoming.metadata?.damaged_cargo_detected || incoming.damaged_cargo_detected
+      ),
+      damage_notes: incoming.metadata?.damage_notes || incoming.damage_notes || "",
+      manual_entry_only: incoming.metadata?.manual_entry_only ?? incoming.manual_entry_only ?? true
+    },
+    audit_events: []
+  };
 }
 
 function mergeWithStoredCase(payload) {
@@ -63,6 +147,9 @@ function buildCaseResponse(caseRecord) {
     case_id: caseRecord.case_id,
     shipment_id: caseRecord.shipment_id,
     uipath_case_id: caseRecord.uipath_case_id,
+    case_source: caseRecord.case_source || (caseRecord.is_sample === false ? "Live intake" : "Sample data"),
+    is_sample: caseRecord.is_sample !== false,
+    maestro_case_key: caseRecord.shipment_id || caseRecord.case_id,
     title: caseRecord.title,
     truck_type: caseRecord.truck_type,
     stage: caseRecord.stage || caseRecord.current_stage || analysis.stage,
@@ -122,6 +209,23 @@ app.get("/health", (_req, res) => {
   });
 });
 
+app.get("/api/maestro/case-plan", (_req, res) => {
+  res.json({
+    case_plan: maestroCasePlan,
+    entity_schema: caseEntitySchema,
+    task_contracts: taskContracts,
+    submission_checklist: submissionChecklist
+  });
+});
+
+app.get("/api/maestro/entity-schema", (_req, res) => {
+  res.json(caseEntitySchema);
+});
+
+app.get("/api/maestro/task-contracts", (_req, res) => {
+  res.json({ task_contracts: taskContracts });
+});
+
 app.get("/api/cases", (_req, res) => {
   res.json({
     cases: [...cases.values()].map(buildCaseResponse)
@@ -132,6 +236,20 @@ app.get("/api/cases/:case_id", (req, res) => {
   const caseRecord = getCaseOr404(req.params.case_id, res);
   if (!caseRecord) return;
   res.json(buildCaseResponse(caseRecord));
+});
+
+app.post("/api/live-cases", (req, res) => {
+  try {
+    const caseRecord = normalizeLiveCasePayload(req.body);
+    addAuditEvent(caseRecord, "Dashboard live intake", "Operator-created cargo loading case");
+    cases.set(caseRecord.case_id, caseRecord);
+    res.status(201).json(buildCaseResponse(caseRecord));
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      error: "live_case_invalid",
+      message: error.message || "Unable to create live case."
+    });
+  }
 });
 
 app.post("/api/analyze-cargo", (req, res) => {
