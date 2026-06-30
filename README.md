@@ -14,6 +14,7 @@ Cargo loading is not a simple linear process. A case may move forward, pause, re
 - Left/right and front/rear imbalance
 - Fragile cargo stacked below heavy freight
 - Missing dock photos or low-quality evidence
+- Box placement feasibility inside the selected truck size
 - Damaged cargo
 - Hazardous or temperature-sensitive cargo
 - Low AI confidence
@@ -40,6 +41,7 @@ Local prototype components:
 - React + Vite dashboard
 - Express API
 - Deterministic cargo-risk service
+- Deterministic cargo load planner
 - Live operator-created case intake
 - Maestro-aligned case plan, entity schema, and task I/O contracts
 
@@ -49,6 +51,7 @@ Real in this repository:
 
 - Working dashboard and API
 - Live case creation from user-entered cargo data
+- Load plan generation from truck dimensions, box dimensions, quantities, and weights
 - Risk scoring and dispatch logic
 - Human approval endpoint
 - Audit timeline
@@ -63,7 +66,7 @@ Simulated until connected to UiPath Automation Cloud:
 - Data Fabric/VDO trigger
 - UiPath tenant authentication
 - Real warehouse/TMS systems
-- Real computer-vision model
+- Real computer-vision model or certified loading/axle-weight solver
 
 ## Quick Start
 
@@ -170,8 +173,8 @@ OPENAI_API_KEY=
 
 The app has two demo paths:
 
-- Live Cargo Intake: enter a shipment, cargo manifest, truck capacity, evidence state, and weight distribution. The API creates a new non-sample case and scores it.
-- Run Demo Scenario: replays a high-risk sample case through the end-to-end Maestro-style API flow.
+- Live Cargo Intake: enter a shipment, cargo manifest, truck dimensions, truck capacity, evidence state, and weight distribution. The API creates a new non-sample case, and the load-plan action generates a placement plan from that same manifest.
+- Run Demo Scenario: replays a high-risk sample case through the end-to-end Maestro-style API flow, including load planning.
 
 The sample cases are intentionally labeled `Sample`. Operator-created cases are labeled `Live`.
 
@@ -203,6 +206,7 @@ UiPath Maestro Case or UiPath API Workflows can call:
 | GET | `/api/cases` | List cases |
 | GET | `/api/cases/{case_id}` | Get one case |
 | POST | `/api/live-cases` | Create a live operator-entered case |
+| POST | `/api/load-plan` | Generate a deterministic cargo placement plan |
 | POST | `/api/uipath/case-created` | Register a Maestro-created case |
 | POST | `/api/uipath/stage-update` | Sync stage changes |
 | POST | `/api/analyze-cargo` | Run cargo/evidence analysis |
@@ -220,10 +224,11 @@ Primary stages:
 
 1. Shipment Intake
 2. Cargo Vision Review
-3. Load Risk Analysis
-4. Human Supervisor Approval
-5. Dispatch Instruction
-6. Closed
+3. 3D Load Plan Generation
+4. Load Risk Analysis
+5. Human Supervisor Approval
+6. Dispatch Instruction
+7. Closed
 
 Secondary stages:
 
@@ -234,6 +239,7 @@ Core task workers:
 
 - API Workflow: register loading request
 - External agent/API: cargo vision review
+- API Workflow: deterministic load plan generation
 - API Workflow: load risk analysis
 - Human action: supervisor approval
 - API Workflow: dispatch instruction
@@ -250,7 +256,7 @@ It is designed to score well on:
 
 - Business impact: unsafe dispatch prevention and accountable supervisor governance
 - Platform usage: Maestro Case as the orchestration layer, with people, agents, API workflows, Data Fabric, and Case App concepts
-- Technical execution: working API, live intake, deterministic risk engine, edge-case handling, and audit trail
+- Technical execution: working API, live intake, deterministic load planner and risk engine, edge-case handling, and audit trail
 - Completeness: runnable prototype, docs, setup, demo script, and submission outline
 - Presentation: a 5-minute live-created case demo instead of only slides
 - Coding agent bonus: Codex-built service and artifacts are documented

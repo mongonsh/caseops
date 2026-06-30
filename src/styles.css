@@ -162,6 +162,21 @@ button {
   box-shadow: 0 12px 28px rgba(34, 211, 182, 0.22);
 }
 
+.secondary-button {
+  min-width: 188px;
+  min-height: 38px;
+  border: 1px solid rgba(34, 211, 182, 0.38);
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  color: var(--teal);
+  background: rgba(34, 211, 182, 0.08);
+  font-weight: 800;
+}
+
 .primary-button:disabled {
   cursor: wait;
   opacity: 0.72;
@@ -474,6 +489,10 @@ button {
   align-items: start;
 }
 
+.load-plan-band {
+  margin-bottom: 18px;
+}
+
 .lower-grid {
   display: grid;
   grid-template-columns: 1.1fr 1fr 0.9fr;
@@ -682,6 +701,128 @@ button {
 .plan-list span {
   color: var(--muted);
   font-size: 0.82rem;
+}
+
+.load-plan-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(330px, 0.65fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.load-plan-visual,
+.load-plan-empty {
+  min-height: 390px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(143, 180, 206, 0.1), rgba(0, 0, 0, 0.22)),
+    rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+.load-plan-empty {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  color: var(--muted);
+  text-align: center;
+  padding: 24px;
+}
+
+.load-plan-empty svg {
+  color: var(--teal);
+}
+
+.load-plan-visual svg {
+  display: block;
+  width: 100%;
+  height: 390px;
+}
+
+.truck-floor {
+  fill: rgba(34, 211, 182, 0.05);
+  stroke: rgba(34, 211, 182, 0.34);
+  stroke-width: 1.2;
+}
+
+.truck-outline {
+  fill: none;
+  stroke: rgba(238, 245, 247, 0.38);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+}
+
+.load-box polygon {
+  stroke: rgba(0, 0, 0, 0.35);
+  stroke-width: 0.7;
+  stroke-linejoin: round;
+}
+
+.load-plan-side {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.load-plan-status {
+  margin: 0;
+  padding: 11px 12px;
+  border: 1px solid rgba(34, 211, 182, 0.22);
+  border-radius: 8px;
+  color: #dffdf7;
+  background: rgba(34, 211, 182, 0.08);
+}
+
+.load-warnings {
+  max-height: 290px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.compact-state {
+  margin-top: 0;
+}
+
+.load-plan-legend {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 0 14px 14px;
+}
+
+.load-plan-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.load-plan-legend i {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.legend-heavy {
+  background: var(--amber);
+}
+
+.legend-fragile {
+  background: #f8d6dc;
+}
+
+.legend-normal {
+  background: var(--steel);
+}
+
+.legend-hazard {
+  background: var(--red);
 }
 
 .cargo-list {
@@ -991,6 +1132,7 @@ code {
 @media (max-width: 1180px) {
   .mission-hero,
   .operator-band,
+  .load-plan-layout,
   .dashboard-grid,
   .lower-grid {
     grid-template-columns: 1fr 1fr;
@@ -1019,6 +1161,7 @@ code {
   .topbar,
   .mission-hero,
   .operator-band,
+  .load-plan-layout,
   .dashboard-grid,
   .lower-grid,
   .case-strip {

@@ -11,6 +11,7 @@ import {
   submissionChecklist,
   taskContracts
 } from "./maestroCasePlan.js";
+import { createLoadPlan } from "./loadPlanner.js";
 import { analyzeCargo, createDispatchInstruction } from "./riskEngine.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -51,6 +52,9 @@ function normalizeCargoItem(item, index) {
     name: item.name || `Cargo item ${index + 1}`,
     quantity: toNumber(item.quantity, 1),
     unit_weight_kg: toNumber(item.unit_weight_kg ?? item.weight_kg, 0),
+    length_m: toNumber(item.length_m ?? item.dimensions_m?.length_m, 0),
+    width_m: toNumber(item.width_m ?? item.dimensions_m?.width_m, 0),
+    height_m: toNumber(item.height_m ?? item.dimensions_m?.height_m, 0),
     fragile: Boolean(item.fragile),
     heavy: Boolean(item.heavy),
     hazardous: Boolean(item.hazardous),
@@ -86,6 +90,7 @@ function normalizeLiveCasePayload(payload) {
     is_sample: false,
     truck_type: incoming.truck_type || "Unspecified truck",
     truck_capacity_kg: toNumber(incoming.truck_capacity_kg, 0),
+    truck_dimensions: incoming.truck_dimensions || incoming.truck || {},
     sla_status: "On track",
     stage: "Shipment Intake",
     current_stage: "Shipment Intake",
@@ -180,6 +185,8 @@ function buildCaseResponse(caseRecord) {
       caseRecord.ai_analysis_result ||
       "Deterministic cargo-risk service analyzed the submitted cargo list and evidence.",
     cargo_items: caseRecord.cargo_items || [],
+    truck_dimensions: caseRecord.truck_dimensions || {},
+    load_plan: caseRecord.load_plan || null,
     evidence: caseRecord.evidence || {},
     metadata: caseRecord.metadata || {},
     weight_distribution: caseRecord.weight_distribution || {},
@@ -248,6 +255,39 @@ app.post("/api/live-cases", (req, res) => {
     res.status(error.statusCode || 500).json({
       error: "live_case_invalid",
       message: error.message || "Unable to create live case."
+    });
+  }
+});
+
+app.post("/api/load-plan", (req, res) => {
+  try {
+    let payload = req.body.case || req.body;
+
+    if (req.body.case_id) {
+      const caseRecord = getCaseOr404(req.body.case_id, res);
+      if (!caseRecord) return;
+      payload = {
+        ...clone(caseRecord),
+        truck_dimensions: req.body.truck_dimensions || req.body.truck || caseRecord.truck_dimensions || {},
+        truck_capacity_kg: req.body.truck_capacity_kg || caseRecord.truck_capacity_kg
+      };
+    }
+
+    const loadPlan = createLoadPlan(payload);
+
+    if (payload.case_id && cases.has(payload.case_id)) {
+      const caseRecord = cases.get(payload.case_id);
+      caseRecord.load_plan = loadPlan;
+      caseRecord.stage = "3D Load Plan Generation";
+      caseRecord.current_stage = "3D Load Plan Generation";
+      addAuditEvent(caseRecord, "Logithon load planner", `${loadPlan.status}: ${loadPlan.placed_box_count}/${loadPlan.box_count_requested} boxes placed`);
+    }
+
+    res.json(loadPlan);
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      error: "load_plan_failed",
+      message: error.message || "Unable to create load plan."
     });
   }
 });

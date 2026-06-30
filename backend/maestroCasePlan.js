@@ -11,6 +11,7 @@ export const caseEntitySchema = {
     dock_id: { type: "string", required: false, readOnly: true },
     truck_type: { type: "string", required: true, readOnly: true },
     truck_capacity_kg: { type: "number", required: true, readOnly: true },
+    truck_dimensions: { type: "object", required: true, readOnly: true },
     cargo_items: { type: "array", required: true, readOnly: true },
     weight_distribution: { type: "object", required: false, readOnly: true },
     evidence: { type: "object", required: false, readOnly: true },
@@ -19,10 +20,17 @@ export const caseEntitySchema = {
   computedFields: {
     "cargoVision.status": { type: "string", writtenBy: "Cargo Vision Review" },
     "cargoVision.confidence": { type: "number", writtenBy: "Cargo Vision Review" },
+    "loadPlan.status": { type: "string", writtenBy: "3D Load Plan Generation" },
+    "loadPlan.placedBoxes": { type: "number", writtenBy: "3D Load Plan Generation" },
+    "loadPlan.unplacedBoxes": { type: "number", writtenBy: "3D Load Plan Generation" },
+    "loadPlan.volumeUtilization": { type: "number", writtenBy: "3D Load Plan Generation" },
+    "loadPlan.balance": { type: "object", writtenBy: "3D Load Plan Generation" },
+    "loadPlan.warnings": { type: "array", writtenBy: "3D Load Plan Generation" },
     "risk.score": { type: "number", writtenBy: "Load Risk Analysis" },
     "risk.level": { type: "string", writtenBy: "Load Risk Analysis" },
     "risk.detectedIssues": { type: "array", writtenBy: "Load Risk Analysis" },
     "risk.requiresHumanReview": { type: "boolean", writtenBy: "Load Risk Analysis" },
+    "risk.saferLoadingSuggestion": { type: "array", writtenBy: "Load Risk Analysis" },
     "approval.status": { type: "string", writtenBy: "Human Supervisor Approval" },
     "approval.notes": { type: "string", writtenBy: "Human Supervisor Approval" },
     "dispatch.finalDecision": { type: "string", writtenBy: "Dispatch Instruction" },
@@ -63,6 +71,26 @@ export const taskContracts = [
     }
   },
   {
+    stage: "3D Load Plan Generation",
+    task: "Generate deterministic load plan",
+    type: "API Workflow",
+    mode: "sequential",
+    runOnlyOnce: false,
+    input: {
+      cargo_items: "caseEntity.cargo_items",
+      truck_dimensions: "caseEntity.truck_dimensions",
+      truck_capacity_kg: "caseEntity.truck_capacity_kg"
+    },
+    output: {
+      "caseEntity.loadPlan.status": "taskOutput.status",
+      "caseEntity.loadPlan.placedBoxes": "taskOutput.placed_box_count",
+      "caseEntity.loadPlan.unplacedBoxes": "taskOutput.unplaced_box_count",
+      "caseEntity.loadPlan.volumeUtilization": "taskOutput.volume_utilization",
+      "caseEntity.loadPlan.balance": "taskOutput.balance",
+      "caseEntity.loadPlan.warnings": "taskOutput.warnings"
+    }
+  },
+  {
     stage: "Load Risk Analysis",
     task: "Load Risk Analysis",
     type: "API Workflow",
@@ -71,6 +99,7 @@ export const taskContracts = [
     input: {
       cargo_items: "caseEntity.cargo_items",
       truck_capacity_kg: "caseEntity.truck_capacity_kg",
+      load_plan: "caseEntity.loadPlan",
       weight_distribution: "caseEntity.weight_distribution",
       evidence: "caseEntity.evidence",
       metadata: "caseEntity.metadata"
@@ -79,7 +108,8 @@ export const taskContracts = [
       "caseEntity.risk.score": "taskOutput.risk_score",
       "caseEntity.risk.level": "taskOutput.risk_level",
       "caseEntity.risk.detectedIssues": "taskOutput.detected_issues",
-      "caseEntity.risk.requiresHumanReview": "taskOutput.requires_human_review"
+      "caseEntity.risk.requiresHumanReview": "taskOutput.requires_human_review",
+      "caseEntity.risk.saferLoadingSuggestion": "taskOutput.safer_loading_suggestion"
     }
   },
   {
@@ -146,12 +176,12 @@ export const maestroCasePlan = {
   personas: [
     {
       name: "Warehouse Intake",
-      viewStages: ["Shipment Intake", "Cargo Vision Review", "Evidence Rework"],
+      viewStages: ["Shipment Intake", "Cargo Vision Review", "3D Load Plan Generation", "Evidence Rework"],
       actStages: ["Shipment Intake", "Evidence Rework"]
     },
     {
       name: "Cargo Safety Supervisor",
-      viewStages: ["Load Risk Analysis", "Human Supervisor Approval", "Dispatch Blocked"],
+      viewStages: ["3D Load Plan Generation", "Load Risk Analysis", "Human Supervisor Approval", "Dispatch Blocked"],
       actStages: ["Human Supervisor Approval", "Dispatch Blocked"]
     },
     {
@@ -161,7 +191,7 @@ export const maestroCasePlan = {
     },
     {
       name: "Case Operator",
-      viewStages: ["Shipment Intake", "Cargo Vision Review", "Load Risk Analysis", "Human Supervisor Approval", "Dispatch Instruction", "Closed"],
+      viewStages: ["Shipment Intake", "Cargo Vision Review", "3D Load Plan Generation", "Load Risk Analysis", "Human Supervisor Approval", "Dispatch Instruction", "Closed"],
       actStages: ["Pause", "Resume", "Retry", "Migrate", "Cancel"]
     }
   ],
@@ -187,7 +217,7 @@ export const maestroCasePlan = {
       completeRule: {
         when: "TaskCompleted:Cargo Vision Review",
         if: "caseEntity.cargoVision.status != null",
-        action: "Start Load Risk Analysis"
+        action: "Start 3D Load Plan Generation"
       },
       reEntryRule: {
         when: "TaskCompleted:Evidence Rework",
@@ -195,11 +225,28 @@ export const maestroCasePlan = {
       }
     },
     {
-      name: "Load Risk Analysis",
+      name: "3D Load Plan Generation",
       kind: "primary",
       required: true,
       sla: "1 business hour",
       entryRule: { when: "StageCompleted:Cargo Vision Review" },
+      completeRule: {
+        when: "TaskCompleted:Generate deterministic load plan",
+        if: "caseEntity.loadPlan.status != null",
+        action: "Start Load Risk Analysis"
+      },
+      exitRule: {
+        when: "TaskCompleted:Generate deterministic load plan",
+        if: "caseEntity.loadPlan.unplacedBoxes > 0",
+        action: "Start Load Risk Analysis with supervisor review flag"
+      }
+    },
+    {
+      name: "Load Risk Analysis",
+      kind: "primary",
+      required: true,
+      sla: "1 business hour",
+      entryRule: { when: "StageCompleted:3D Load Plan Generation" },
       completeRule: {
         when: "TaskCompleted:Load Risk Analysis",
         if: "caseEntity.risk.requiresHumanReview == false",
@@ -304,7 +351,7 @@ export const maestroCasePlan = {
     "API Workflows",
     "Data Fabric or VDO trigger",
     "Integration Service connector trigger",
-    "Codex-built external cargo-risk service"
+    "Codex-built external cargo-risk and load-planning service"
   ],
   docsBasis: [
     "https://docs.uipath.com/maestro/automation-cloud/latest/user-guide/maestro-integration-with-the-uipath-ecosystem",
@@ -318,7 +365,7 @@ export const maestroCasePlan = {
     judgingHooks: [
       "Business impact: prevents unsafe cargo dispatch and creates auditable supervisor governance.",
       "Platform usage: Maestro Case is the orchestration layer; external coded service is a task worker.",
-      "Technical execution: deterministic rules, live intake, API contracts, rework, SLA and human approval paths.",
+      "Technical execution: deterministic rules, live intake, 3D load planning, API contracts, rework, SLA and human approval paths.",
       "Presentation: 5-minute demo can show a live-created case rather than only canned data.",
       "Coding agent bonus: Codex-built risk service and project artifacts are documented."
     ]

@@ -41,6 +41,11 @@ const demoSteps = [
     body: { case_id: "LCOPS-1002" }
   },
   {
+    label: "3D load plan generated",
+    endpoint: "/api/load-plan",
+    body: { case_id: "LCOPS-1002" }
+  },
+  {
     label: "Load risk detected",
     endpoint: "/api/risk-score",
     body: { case_id: "LCOPS-1002" }
@@ -79,6 +84,7 @@ const demoSteps = [
 const fallbackStages = [
   "Shipment Intake",
   "Cargo Vision Review",
+  "3D Load Plan Generation",
   "Load Risk Analysis",
   "Human Supervisor Approval",
   "Dispatch Instruction",
@@ -87,6 +93,7 @@ const fallbackStages = [
 
 const apiContract = [
   ["Live case intake", "POST /api/live-cases"],
+  ["3D load plan", "POST /api/load-plan"],
   ["Case created", "POST /api/uipath/case-created"],
   ["AI review", "POST /api/analyze-cargo"],
   ["Risk scoring", "POST /api/risk-score"],
@@ -99,6 +106,7 @@ const bonusItems = [
   "UiPath-ready case plan artifact",
   "Explicit case entity schema",
   "Task I/O write-back contracts",
+  "Deterministic 3D load planner",
   "Live operator-created cases",
   "Human approval and rework path",
   "Codex-built risk service"
@@ -111,6 +119,9 @@ function buildLiveForm() {
     title: "Live dock safety check",
     truck_type: "53 ft dry van",
     truck_capacity_kg: "18000",
+    truck_length_m: "16.15",
+    truck_width_m: "2.59",
+    truck_height_m: "2.69",
     evidence_state: "attached",
     damaged_cargo_detected: false,
     manual_entry_only: true,
@@ -119,7 +130,7 @@ function buildLiveForm() {
     front_kg: "8400",
     rear_kg: "6600",
     cargo_text:
-      "Industrial pump pallet,4,1750,heavy,floor,left-wall\nMotor crate,2,1450,heavy,floor,left-wall\nElectronics carton,14,52,fragile,top,center"
+      "Industrial pump pallet,4,1750,1.2,1.0,1.1,heavy,floor,left-wall\nMotor crate,2,1450,1.1,1.0,1.0,heavy,floor,left-wall\nElectronics carton,14,52,0.55,0.42,0.36,fragile,top,center"
   };
 }
 
@@ -129,6 +140,10 @@ function sleep(ms) {
 
 function formatKg(value) {
   return `${Number(value || 0).toLocaleString()} kg`;
+}
+
+function formatPercent(value) {
+  return `${Math.round(Number(value || 0) * 100)}%`;
 }
 
 function levelClass(level) {
@@ -141,8 +156,27 @@ function parseCargoLines(value) {
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line, index) => {
-      const [name, quantity, unitWeight, rawFlags = "", stackPosition = "floor", stackGroup = "main"] =
-        line.split(",").map((part) => part.trim());
+      const parts = line.split(",").map((part) => part.trim());
+      let name;
+      let quantity;
+      let unitWeight;
+      let lengthM;
+      let widthM;
+      let heightM;
+      let rawFlags;
+      let stackPosition;
+      let stackGroup;
+
+      if (parts.length >= 9) {
+        [name, quantity, unitWeight, lengthM, widthM, heightM, rawFlags = "", stackPosition = "floor", stackGroup = "main"] =
+          parts;
+      } else {
+        [name, quantity, unitWeight, rawFlags = "", stackPosition = "floor", stackGroup = "main"] = parts;
+        lengthM = "1.2";
+        widthM = "1";
+        heightM = "0.8";
+      }
+
       const flags = new Set(
         rawFlags
           .toLowerCase()
@@ -156,6 +190,9 @@ function parseCargoLines(value) {
         name: name || `Cargo item ${index + 1}`,
         quantity: Number(quantity) || 1,
         unit_weight_kg: Number(unitWeight) || 0,
+        length_m: Number(lengthM) || 0,
+        width_m: Number(widthM) || 0,
+        height_m: Number(heightM) || 0,
         fragile: flags.has("fragile"),
         heavy: flags.has("heavy"),
         hazardous: flags.has("hazmat") || flags.has("hazardous"),
@@ -178,6 +215,8 @@ function App() {
   const [maestroPlan, setMaestroPlan] = useState(null);
   const [liveForm, setLiveForm] = useState(buildLiveForm);
   const [liveCaseStatus, setLiveCaseStatus] = useState("");
+  const [loadPlan, setLoadPlan] = useState(null);
+  const [loadPlanStatus, setLoadPlanStatus] = useState("");
 
   const selectedCase = useMemo(
     () => cases.find((caseRecord) => caseRecord.case_id === selectedCaseId) || cases[0],
@@ -267,6 +306,12 @@ function App() {
       title: liveForm.title,
       truck_type: liveForm.truck_type,
       truck_capacity_kg: Number(liveForm.truck_capacity_kg),
+      truck_dimensions: {
+        length_m: Number(liveForm.truck_length_m),
+        width_m: Number(liveForm.truck_width_m),
+        height_m: Number(liveForm.truck_height_m),
+        max_weight_kg: Number(liveForm.truck_capacity_kg)
+      },
       cargo_items: cargoItems,
       weight_distribution: {
         left_kg: Number(liveForm.left_kg),
@@ -302,6 +347,43 @@ function App() {
       }));
     } catch (error) {
       setLiveCaseStatus(error.message);
+    }
+  }
+
+  async function generateLoadPlan(event) {
+    event?.preventDefault();
+    const cargoItems = parseCargoLines(liveForm.cargo_text);
+
+    if (cargoItems.length === 0) {
+      setLoadPlanStatus("Add cargo rows before generating a load plan.");
+      setLoadPlan(null);
+      return;
+    }
+
+    setLoadPlanStatus("Calculating load plan...");
+
+    try {
+      const response = await fetch("/api/load-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          truck_dimensions: {
+            length_m: Number(liveForm.truck_length_m),
+            width_m: Number(liveForm.truck_width_m),
+            height_m: Number(liveForm.truck_height_m),
+            max_weight_kg: Number(liveForm.truck_capacity_kg)
+          },
+          truck_capacity_kg: Number(liveForm.truck_capacity_kg),
+          cargo_items: cargoItems
+        })
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.message || "Load plan failed.");
+      setLoadPlan(payload);
+      setLoadPlanStatus(`${payload.status}: ${payload.placed_box_count}/${payload.box_count_requested} boxes placed.`);
+    } catch (error) {
+      setLoadPlan(null);
+      setLoadPlanStatus(error.message);
     }
   }
 
@@ -459,8 +541,37 @@ function App() {
                 />
               </label>
             </div>
+            <div className="form-grid compact">
+              <label>
+                <span>Truck length m</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={liveForm.truck_length_m}
+                  onChange={(event) => updateLiveForm("truck_length_m", event.target.value)}
+                />
+              </label>
+              <label>
+                <span>Truck width m</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={liveForm.truck_width_m}
+                  onChange={(event) => updateLiveForm("truck_width_m", event.target.value)}
+                />
+              </label>
+              <label>
+                <span>Truck height m</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={liveForm.truck_height_m}
+                  onChange={(event) => updateLiveForm("truck_height_m", event.target.value)}
+                />
+              </label>
+            </div>
             <label className="wide-label">
-              <span>Cargo manifest</span>
+              <span>Cargo manifest: name, qty, kg, L, W, H, flags, stack, group</span>
               <textarea
                 value={liveForm.cargo_text}
                 onChange={(event) => updateLiveForm("cargo_text", event.target.value)}
@@ -534,6 +645,10 @@ function App() {
                 <PlusCircle size={17} />
                 Create Live Case
               </button>
+              <button className="secondary-button form-button" type="button" onClick={generateLoadPlan}>
+                <Boxes size={17} />
+                Generate Load Plan
+              </button>
               {liveCaseStatus && <span>{liveCaseStatus}</span>}
             </div>
           </form>
@@ -553,6 +668,28 @@ function App() {
                 <span>{trigger.endpoint || trigger.entity}</span>
               </div>
             ))}
+          </div>
+        </Panel>
+      </section>
+
+      <section className="load-plan-band">
+        <Panel title="3D cargo load plan" icon={<Boxes />}>
+          <div className="load-plan-layout">
+            <LoadPlanVisual loadPlan={loadPlan} />
+            <div className="load-plan-side">
+              <InfoGrid
+                items={[
+                  ["Status", loadPlan?.status || "Not generated"],
+                  ["Boxes placed", loadPlan ? `${loadPlan.placed_box_count}/${loadPlan.box_count_requested}` : "0/0"],
+                  ["Volume use", loadPlan ? formatPercent(loadPlan.volume_utilization) : "0%"],
+                  ["Weight use", loadPlan?.weight_utilization ? formatPercent(loadPlan.weight_utilization) : "n/a"],
+                  ["Left / right", loadPlan ? `${formatKg(loadPlan.balance.left_kg)} / ${formatKg(loadPlan.balance.right_kg)}` : "n/a"],
+                  ["Front / rear", loadPlan ? `${formatKg(loadPlan.balance.front_kg)} / ${formatKg(loadPlan.balance.rear_kg)}` : "n/a"]
+                ]}
+              />
+              {loadPlanStatus && <p className="load-plan-status">{loadPlanStatus}</p>}
+              <WarningList warnings={loadPlan?.warnings || []} />
+            </div>
           </div>
         </Panel>
       </section>
@@ -797,6 +934,146 @@ function IssueList({ issues }) {
           <span>{issue.severity}</span>
         </div>
       ))}
+    </div>
+  );
+}
+
+function WarningList({ warnings }) {
+  if (!warnings.length) {
+    return (
+      <div className="clear-state compact-state">
+        <CheckCircle2 size={18} />
+        <span>No load-plan warnings.</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="issue-list load-warnings">
+      {warnings.map((warning) => (
+        <div className="issue-card medium" key={warning}>
+          <div>
+            <strong>{warning}</strong>
+          </div>
+          <span>Review</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function boxColor(placement) {
+  if (placement.hazardous) return "#ff6b6b";
+  if (placement.fragile) return "#f8d6dc";
+  if (placement.heavy) return "#f6b84b";
+  return "#8fb4ce";
+}
+
+function shadeColor(hex, amount) {
+  const number = Number.parseInt(hex.replace("#", ""), 16);
+  const red = Math.max(0, Math.min(255, (number >> 16) + amount));
+  const green = Math.max(0, Math.min(255, ((number >> 8) & 255) + amount));
+  const blue = Math.max(0, Math.min(255, (number & 255) + amount));
+  return `rgb(${red}, ${green}, ${blue})`;
+}
+
+function LoadPlanVisual({ loadPlan }) {
+  if (!loadPlan) {
+    return (
+      <div className="load-plan-empty">
+        <Boxes size={36} />
+        <span>Generate a load plan from the manifest to see placed boxes.</span>
+      </div>
+    );
+  }
+
+  const truck = loadPlan.truck;
+  const scale = Math.min(35, 680 / truck.length_m, 150 / truck.width_m, 150 / truck.height_m);
+  const origin = { x: 80, y: 330 };
+  const project = (point) => ({
+    x: origin.x + point.x * scale + point.y * scale * 0.58,
+    y: origin.y - point.z * scale - point.y * scale * 0.36
+  });
+  const points = (placement) => {
+    const x = placement.x;
+    const y = placement.y;
+    const z = placement.z;
+    const length = placement.length_m;
+    const width = placement.width_m;
+    const height = placement.height_m;
+    return {
+      a: project({ x, y, z }),
+      b: project({ x: x + length, y, z }),
+      c: project({ x: x + length, y: y + width, z }),
+      d: project({ x, y: y + width, z }),
+      e: project({ x, y, z: z + height }),
+      f: project({ x: x + length, y, z: z + height }),
+      g: project({ x: x + length, y: y + width, z: z + height }),
+      h: project({ x, y: y + width, z: z + height })
+    };
+  };
+  const polygon = (...items) => items.map((point) => `${point.x},${point.y}`).join(" ");
+  const truckCorners = points({
+    x: 0,
+    y: 0,
+    z: 0,
+    length_m: truck.length_m,
+    width_m: truck.width_m,
+    height_m: truck.height_m
+  });
+  const sortedPlacements = [...loadPlan.placements].sort(
+    (a, b) => a.x + a.y + a.z - (b.x + b.y + b.z)
+  );
+
+  return (
+    <div className="load-plan-visual" aria-label="Isometric cargo load plan">
+      <svg viewBox="0 0 860 390" role="img">
+        <polygon
+          className="truck-floor"
+          points={polygon(truckCorners.a, truckCorners.b, truckCorners.c, truckCorners.d)}
+        />
+        <polyline
+          className="truck-outline"
+          points={polygon(
+            truckCorners.a,
+            truckCorners.b,
+            truckCorners.c,
+            truckCorners.d,
+            truckCorners.a,
+            truckCorners.e,
+            truckCorners.f,
+            truckCorners.b,
+            truckCorners.f,
+            truckCorners.g,
+            truckCorners.c,
+            truckCorners.g,
+            truckCorners.h,
+            truckCorners.d,
+            truckCorners.h,
+            truckCorners.e
+          )}
+        />
+        {sortedPlacements.map((placement) => {
+          const p = points(placement);
+          const color = boxColor(placement);
+          return (
+            <g className="load-box" key={placement.box_id}>
+              <title>
+                {`${placement.box_id}: ${placement.source_item}, ${placement.weight_kg} kg at x ${placement.x}m, y ${placement.y}m, z ${placement.z}m`}
+              </title>
+              <polygon points={polygon(p.e, p.f, p.g, p.h)} fill={shadeColor(color, 18)} />
+              <polygon points={polygon(p.b, p.c, p.g, p.f)} fill={shadeColor(color, -18)} />
+              <polygon points={polygon(p.a, p.b, p.f, p.e)} fill={color} />
+            </g>
+          );
+        })}
+      </svg>
+      <div className="load-plan-legend">
+        <span><i className="legend-heavy" /> Heavy</span>
+        <span><i className="legend-fragile" /> Fragile</span>
+        <span><i className="legend-normal" /> Standard</span>
+        <span><i className="legend-hazard" /> Hazardous</span>
+      </div>
     </div>
   );
 }

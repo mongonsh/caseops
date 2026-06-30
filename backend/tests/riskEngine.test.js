@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import { sampleCases } from "../data/cases.js";
+import { createLoadPlan } from "../loadPlanner.js";
 import { analyzeCargo, createDispatchInstruction } from "../riskEngine.js";
 
 const lowRisk = analyzeCargo(sampleCases[0]);
@@ -66,4 +67,90 @@ assert.equal(liveOperatorCase.risk_level, "High");
 assert.equal(liveOperatorCase.requires_human_review, true);
 assert.ok(liveOperatorCase.detected_issues.some((issue) => issue.id === "weight_imbalance"));
 
-console.log("riskEngine tests passed");
+const feasibleLoadPlan = createLoadPlan({
+  truck_dimensions: {
+    length_m: 4.8,
+    width_m: 2.4,
+    height_m: 2.4,
+    max_weight_kg: 4000
+  },
+  cargo_items: [
+    {
+      sku: "PAL",
+      name: "Machine pallet",
+      quantity: 2,
+      unit_weight_kg: 700,
+      length_m: 1.2,
+      width_m: 1,
+      height_m: 1,
+      heavy: true
+    },
+    {
+      sku: "BOX",
+      name: "Accessory box",
+      quantity: 4,
+      unit_weight_kg: 80,
+      length_m: 0.8,
+      width_m: 0.6,
+      height_m: 0.6
+    }
+  ]
+});
+assert.equal(feasibleLoadPlan.box_count_requested, 6);
+assert.equal(feasibleLoadPlan.placed_box_count, 6);
+assert.equal(feasibleLoadPlan.unplaced_box_count, 0);
+assert.ok(feasibleLoadPlan.volume_utilization > 0);
+
+const impossibleLoadPlan = createLoadPlan({
+  truck_dimensions: {
+    length_m: 2,
+    width_m: 2,
+    height_m: 2,
+    max_weight_kg: 2000
+  },
+  cargo_items: [
+    {
+      sku: "OVR",
+      name: "Oversized crate",
+      quantity: 1,
+      unit_weight_kg: 100,
+      length_m: 3,
+      width_m: 1,
+      height_m: 1
+    }
+  ]
+});
+assert.equal(impossibleLoadPlan.placed_box_count, 0);
+assert.equal(impossibleLoadPlan.unplaced_box_count, 1);
+assert.ok(impossibleLoadPlan.warnings.some((warning) => warning.includes("could not fit")));
+
+const riskWithImpossibleLoadPlan = analyzeCargo({
+  case_id: "LCOPS-LOADPLAN-TEST",
+  shipment_id: "SHP-LOADPLAN-TEST",
+  truck_capacity_kg: 2000,
+  cargo_items: [
+    {
+      sku: "OVR",
+      name: "Oversized crate",
+      quantity: 1,
+      unit_weight_kg: 100,
+      length_m: 3,
+      width_m: 1,
+      height_m: 1
+    }
+  ],
+  load_plan: impossibleLoadPlan,
+  weight_distribution: {
+    left_kg: 50,
+    right_kg: 50,
+    front_kg: 50,
+    rear_kg: 50
+  },
+  evidence: {
+    image_uploaded: true
+  }
+});
+assert.equal(riskWithImpossibleLoadPlan.requires_human_review, true);
+assert.ok(riskWithImpossibleLoadPlan.detected_issues.some((issue) => issue.id === "unplaced_cargo"));
+
+console.log("backend tests passed");

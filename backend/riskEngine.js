@@ -10,7 +10,10 @@ const ISSUE_POINTS = {
   damagedCargo: 42,
   hazardousCargo: 34,
   temperatureSensitive: 24,
-  lowConfidence: 22
+  lowConfidence: 22,
+  loadPlanUnplaced: 42,
+  loadPlanWarning: 18,
+  plannedImbalance: 30
 };
 
 function round(value, decimals = 2) {
@@ -126,6 +129,7 @@ function analyzeDistribution(distribution, totalWeight) {
 export function analyzeCargo(caseLike = {}) {
   const items = normalizeCargoItems(caseLike);
   const capacityKg = getCapacity(caseLike);
+  const loadPlan = caseLike.load_plan || caseLike.loadPlan || null;
   const totalWeightKg = items.reduce((sum, item) => sum + itemWeight(item), 0);
   const cargoCount = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
   const fragileItems = items.filter((item) => item.fragile).length;
@@ -191,6 +195,57 @@ export function analyzeCargo(caseLike = {}) {
       })
     );
     suggestions.push("Rebalance the heaviest pallets toward the center and forward third.");
+  }
+
+  if (loadPlan?.unplaced_box_count > 0) {
+    issues.push(
+      createIssue({
+        id: "unplaced_cargo",
+        severity: "High",
+        title: "Load planner could not place all cargo",
+        evidence: `${loadPlan.unplaced_box_count} of ${loadPlan.box_count_requested || "the"} box(es) could not fit in the submitted truck dimensions`,
+        recommendation: "Change truck size, split the shipment, or remove cargo before dispatch.",
+        points: ISSUE_POINTS.loadPlanUnplaced,
+        requiresHuman: true
+      })
+    );
+    suggestions.push("Use a larger truck, split the route, or reduce the load before approval.");
+  }
+
+  const loadPlanWarnings = Array.isArray(loadPlan?.warnings) ? loadPlan.warnings : [];
+  if (loadPlanWarnings.length > 0) {
+    issues.push(
+      createIssue({
+        id: "load_plan_warnings",
+        severity: "Medium",
+        title: "Load planner returned review warnings",
+        evidence: loadPlanWarnings.slice(0, 2).join(" "),
+        recommendation: "Review the generated placement plan before allowing dispatch.",
+        points: ISSUE_POINTS.loadPlanWarning,
+        requiresHuman: loadPlan.status === "Needs review"
+      })
+    );
+  }
+
+  const plannedBalance = loadPlan?.balance;
+  const plannedImbalanceRatio = Math.max(
+    plannedBalance?.lateral_imbalance_ratio || 0,
+    plannedBalance?.longitudinal_imbalance_ratio || 0
+  );
+  const hasDistributionIssue = issues.some((issue) => issue.id === "weight_imbalance");
+  if (!hasDistributionIssue && plannedImbalanceRatio >= 0.25) {
+    issues.push(
+      createIssue({
+        id: "planned_load_imbalance",
+        severity: "High",
+        title: "Generated load plan is imbalanced",
+        evidence: `${round(plannedImbalanceRatio * 100, 1)} percent imbalance in the generated plan`,
+        recommendation: "Regenerate the placement after moving dense cargo toward the center line.",
+        points: ISSUE_POINTS.plannedImbalance,
+        requiresHuman: true
+      })
+    );
+    suggestions.push("Use the generated plan as a starting point, then rebalance dense freight toward the center line.");
   }
 
   const evidence = caseLike.evidence || {};

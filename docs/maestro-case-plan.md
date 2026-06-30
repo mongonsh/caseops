@@ -28,6 +28,7 @@ Input fields are hydrated from Data Fabric, VDO, an API trigger, or the live int
 - `dock_id`
 - `truck_type`
 - `truck_capacity_kg`
+- `truck_dimensions`
 - `cargo_items`
 - `weight_distribution`
 - `evidence`
@@ -39,10 +40,17 @@ Computed fields are written by exactly one task:
 | --- | --- |
 | `cargoVision.status` | Cargo Vision Review |
 | `cargoVision.confidence` | Cargo Vision Review |
+| `loadPlan.status` | 3D Load Plan Generation |
+| `loadPlan.placedBoxes` | 3D Load Plan Generation |
+| `loadPlan.unplacedBoxes` | 3D Load Plan Generation |
+| `loadPlan.volumeUtilization` | 3D Load Plan Generation |
+| `loadPlan.balance` | 3D Load Plan Generation |
+| `loadPlan.warnings` | 3D Load Plan Generation |
 | `risk.score` | Load Risk Analysis |
 | `risk.level` | Load Risk Analysis |
 | `risk.detectedIssues` | Load Risk Analysis |
 | `risk.requiresHumanReview` | Load Risk Analysis |
+| `risk.saferLoadingSuggestion` | Load Risk Analysis |
 | `approval.status` | Human Supervisor Approval |
 | `approval.notes` | Human Supervisor Approval |
 | `dispatch.finalDecision` | Dispatch Instruction |
@@ -54,6 +62,7 @@ Computed fields are written by exactly one task:
 | --- | --- | --- | --- |
 | Shipment Intake | Primary | Yes | Starts when a case is created and validates the cargo request. |
 | Cargo Vision Review | Primary | Yes | Checks dock evidence and cargo metadata. |
+| 3D Load Plan Generation | Primary | Yes | Creates a deterministic box placement plan from truck size and cargo dimensions. |
 | Load Risk Analysis | Primary | Yes | Runs the coded risk service and writes risk outputs. |
 | Human Supervisor Approval | Primary | Conditional | Activates when risk or uncertainty requires approval. |
 | Dispatch Instruction | Primary | Yes | Creates loading controls and final dispatch outcome. |
@@ -82,11 +91,12 @@ uipath/maestro-case-plan.json
 1. Create or select a cargo loading case.
 2. Maestro enters `Shipment Intake`.
 3. API Workflow calls `POST /api/analyze-cargo`.
-4. API Workflow calls `POST /api/risk-score`.
-5. If `requires_human_review` is true, Maestro enters `Human Supervisor Approval`.
-6. Human action task writes the supervisor decision through `POST /api/human-decision`.
-7. API Workflow calls `POST /api/dispatch-instructions`.
-8. Maestro closes the case or routes to a secondary exception stage.
+4. API Workflow calls `POST /api/load-plan`.
+5. API Workflow calls `POST /api/risk-score`.
+6. If `requires_human_review` is true, Maestro enters `Human Supervisor Approval`.
+7. Human action task writes the supervisor decision through `POST /api/human-decision`.
+8. API Workflow calls `POST /api/dispatch-instructions`.
+9. Maestro closes the case or routes to a secondary exception stage.
 
 ## What Is Real vs. Simulated
 
@@ -95,6 +105,7 @@ Real in this repo:
 - Working Express API.
 - Working React dashboard.
 - Live case creation from user-entered cargo data.
+- Deterministic cargo load-plan generation from truck dimensions and item dimensions.
 - Deterministic cargo risk engine.
 - Human approval endpoint.
 - Dispatch instruction endpoint.
