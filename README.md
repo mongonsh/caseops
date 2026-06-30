@@ -180,13 +180,6 @@ The sample cases are intentionally labeled `Sample`. Operator-created cases are 
 
 ## Maestro Artifacts
 
-Primary artifacts:
-
-- `docs/maestro-case-plan.md`
-- `uipath/maestro-case-plan.json`
-- `docs/demo-script.md`
-- `docs/devpost-submission-outline.md`
-- `.env.example`
 
 Runtime artifact endpoints:
 
@@ -244,22 +237,6 @@ Core task workers:
 - Human action: supervisor approval
 - API Workflow: dispatch instruction
 
-## Judging Alignment
-
-For UiPath AgentHack, this project targets:
-
-- Runner-up of UiPath Maestro Case
-- Honorable Mention of UiPath Maestro Case
-- Best Demo / Presentation
-
-It is designed to score well on:
-
-- Business impact: unsafe dispatch prevention and accountable supervisor governance
-- Platform usage: Maestro Case as the orchestration layer, with people, agents, API workflows, Data Fabric, and Case App concepts
-- Technical execution: working API, live intake, deterministic load planner and risk engine, edge-case handling, and audit trail
-- Completeness: runnable prototype, docs, setup, demo script, and submission outline
-- Presentation: a 5-minute live-created case demo instead of only slides
-- Coding agent bonus: Codex-built service and artifacts are documented
 
 ## Sources Used
 

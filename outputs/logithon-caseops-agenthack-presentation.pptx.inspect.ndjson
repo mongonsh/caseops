@@ -1,0 +1,83 @@
+{"kind":"deck","id":"pr/mffw5n","name":"Deck"}
+{"kind":"layout","layoutId":"e986b28b-2c67-46a1-8a6c-f76a405a2458","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"bef16794-20a1-4da8-b00f-75d034874cc8","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/mikw0g","slide":1,"title":"UiPath Maestro Case","textShapes":7}
+{"kind":"shape","id":"sh/tcj6tova","slide":1,"bbox":[0,0,1280,720]}
+{"kind":"shape","id":"sh/il0rqd4v","slide":1,"bbox":[0,0,1280,18]}
+{"kind":"textbox","id":"sh/b6xkf6dc","slide":1,"text":"UiPath Maestro Case","textPreview":"UiPath Maestro Case","textChars":19,"textLines":1,"bbox":[72,76,210,34]}
+{"kind":"textbox","id":"sh/0je9cvix","slide":1,"text":"Logithon CaseOps","textPreview":"Logithon CaseOps","textChars":16,"textLines":1,"bbox":[72,180,720,82]}
+{"kind":"textbox","id":"sh/t47y1kre","slide":1,"text":"3D cargo load planning, risk scoring, and dispatch orchestration","textPreview":"3D cargo load planning, risk scoring, and dispatch orchestration","textChars":64,"textLines":1,"bbox":[76,280,780,74]}
+{"kind":"shape","id":"sh/idonyd0z","slide":1,"bbox":[874,136,300,340]}
+{"kind":"textbox","id":"sh/byhgn29g","slide":1,"text":"Inputs","textPreview":"Inputs","textChars":6,"textLines":1,"bbox":[922,182,210,30]}
+{"kind":"textbox","id":"sh/0fepkzup","slide":1,"text":"Truck size\nCargo count\nWeight\nDimensions","textPreview":"Truck size | Cargo count | Weight | Dimensions","textChars":40,"textLines":4,"bbox":[922,226,210,132]}
+{"kind":"textbox","id":"sh/p0bi9s36","slide":1,"text":"Output: safer dispatch","textPreview":"Output: safer dispatch","textChars":22,"textLines":1,"bbox":[922,394,220,32]}
+{"kind":"textbox","id":"sh/x0nuxc3y","slide":1,"text":"Built by Mongoo T","textPreview":"Built by Mongoo T","textChars":17,"textLines":1,"bbox":[76,612,360,28]}
+{"kind":"notes","id":"nt/mikw0g","slide":1,"text":""}
+{"kind":"slide","id":"sl/zjzaz1","slide":2,"title":"Problem and solution","textShapes":7}
+{"kind":"shape","id":"sh/ih4byhgn","slide":2,"bbox":[0,0,1280,18]}
+{"kind":"textbox","id":"sh/p8nqxs72","slide":2,"text":"Problem and solution","textPreview":"Problem and solution","textChars":20,"textLines":1,"bbox":[72,54,900,58]}
+{"kind":"textbox","id":"sh/0nuxc3yl","slide":2,"text":"UiPath AgentHack 2026 | Logithon CaseOps | 2","textPreview":"UiPath AgentHack 2026 | Logithon CaseOps | 2","textChars":44,"textLines":1,"bbox":[72,666,420,24]}
+{"kind":"shape","id":"sh/7ed8bat4","slide":2,"bbox":[72,148,510,408]}
+{"kind":"textbox","id":"sh/itgfmlkj","slide":2,"text":"The problem","textPreview":"The problem","textChars":11,"textLines":1,"bbox":[112,190,380,36]}
+{"kind":"textbox","id":"sh/pkzupwb2","slide":2,"text":"Cargo loading decisions are often manual, slow, and hard to audit. Teams must balance truck capacity, item count, stability, and dispatch risk under time pressure.","textPreview":"Cargo loading decisions are often manual, slow, and hard to audit. Teams must balance truck capacity, item count, stability, and dispatch...","textChars":163,"textLines":1,"bbox":[112,250,405,170]}
+{"kind":"shape","id":"sh/0z61032l","slide":2,"bbox":[698,148,510,408]}
+{"kind":"textbox","id":"sh/7qpg3ex0","slide":2,"text":"Our solution","textPreview":"Our solution","textChars":12,"textLines":1,"bbox":[738,190,380,36]}
+{"kind":"textbox","id":"sh/i5sneloj","slide":2,"text":"Logithon CaseOps turns each shipment into a UiPath Maestro case with intake, evidence review, 3D load planning, risk scoring, approval, dispatch, and closure.","textPreview":"Logithon CaseOps turns each shipment into a UiPath Maestro case with intake, evidence review, 3D load planning, risk scoring, approval, d...","textChars":158,"textLines":1,"bbox":[738,250,405,174]}
+{"kind":"textbox","id":"sh/0nuxc3yl","slide":2,"text":"Manual work -> auditable case","textPreview":"Manual work -> auditable case","textChars":29,"textLines":1,"bbox":[438,590,398,34]}
+{"kind":"notes","id":"nt/zjzaz1","slide":2,"text":""}
+{"kind":"slide","id":"sl/syi9ye","slide":3,"title":"What it does","textShapes":15}
+{"kind":"shape","id":"sh/u18jqh0f","slide":3,"bbox":[0,0,1280,18]}
+{"kind":"textbox","id":"sh/1orytsvu","slide":3,"text":"What it does","textPreview":"What it does","textChars":12,"textLines":1,"bbox":[72,54,900,58]}
+{"kind":"textbox","id":"sh/c7u54zid","slide":3,"text":"UiPath AgentHack 2026 | Logithon CaseOps | 3","textPreview":"UiPath AgentHack 2026 | Logithon CaseOps | 3","textChars":44,"textLines":1,"bbox":[72,666,420,24]}
+{"kind":"shape","id":"sh/judg7ads","slide":3,"bbox":[72,168,252,320]}
+{"kind":"textbox","id":"sh/u9knih4b","slide":3,"text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[98,200,80,32]}
+{"kind":"textbox","id":"sh/1032lszq","slide":3,"text":"Cargo fit","textPreview":"Cargo fit","textChars":9,"textLines":1,"bbox":[98,254,190,58]}
+{"kind":"textbox","id":"sh/cfa9w3m9","slide":3,"text":"Counts cargo, checks truck capacity, and validates item dimensions.","textPreview":"Counts cargo, checks truck capacity, and validates item dimensions.","textChars":67,"textLines":1,"bbox":[98,338,194,126]}
+{"kind":"shape","id":"sh/nyd0z610","slide":3,"bbox":[368,168,252,320]}
+{"kind":"textbox","id":"sh/udg7adsj","slide":3,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[394,200,80,32]}
+{"kind":"textbox","id":"sh/czed8v6p","slide":3,"text":"3D load plan","textPreview":"3D load plan","textChars":12,"textLines":1,"bbox":[394,254,190,58]}
+{"kind":"textbox","id":"sh/5kb6xkf6","slide":3,"text":"Generates deterministic x/y/z placements for cargo boxes.","textPreview":"Generates deterministic x/y/z placements for cargo boxes.","textChars":57,"textLines":1,"bbox":[394,338,194,126]}
+{"kind":"shape","id":"sh/ytsvu9kn","slide":3,"bbox":[664,168,252,320]}
+{"kind":"textbox","id":"sh/neloj2t8","slide":3,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[690,200,80,32]}
+{"kind":"textbox","id":"sh/cbulwval","slide":3,"text":"Risk score","textPreview":"Risk score","textChars":10,"textLines":1,"bbox":[690,254,190,58]}
+{"kind":"textbox","id":"sh/5sneloj2","slide":3,"text":"Flags overload, imbalance, unsupported cargo, and dispatch blockers.","textPreview":"Flags overload, imbalance, unsupported cargo, and dispatch blockers.","textChars":68,"textLines":1,"bbox":[690,338,194,126]}
+{"kind":"shape","id":"sh/u54zidon","slide":3,"bbox":[960,168,252,320]}
+{"kind":"textbox","id":"sh/nqxs72x4","slide":3,"text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[986,200,80,32]}
+{"kind":"textbox","id":"sh/gbq1oryt","slide":3,"text":"Dispatch guidance","textPreview":"Dispatch guidance","textChars":17,"textLines":1,"bbox":[986,254,190,58]}
+{"kind":"textbox","id":"sh/5wjudg7a","slide":3,"text":"Produces clear instructions and exception paths for operators.","textPreview":"Produces clear instructions and exception paths for operators.","textChars":62,"textLines":1,"bbox":[986,338,194,126]}
+{"kind":"textbox","id":"sh/t47y1kre","slide":3,"text":"Real calculations, not fake performance claims.","textPreview":"Real calculations, not fake performance claims.","textChars":47,"textLines":1,"bbox":[72,552,760,34]}
+{"kind":"notes","id":"nt/syi9ye","slide":3,"text":""}
+{"kind":"slide","id":"sl/uzah0o","slide":4,"title":"How we built it","textShapes":15}
+{"kind":"shape","id":"sh/f6dcbulw","slide":4,"bbox":[0,0,1280,18]}
+{"kind":"textbox","id":"sh/4r65wjud","slide":4,"text":"How we built it","textPreview":"How we built it","textChars":15,"textLines":1,"bbox":[72,54,900,58]}
+{"kind":"textbox","id":"sh/xc3ylc7u","slide":4,"text":"UiPath AgentHack 2026 | Logithon CaseOps | 4","textPreview":"UiPath AgentHack 2026 | Logithon CaseOps | 4","textChars":44,"textLines":1,"bbox":[72,666,420,24]}
+{"kind":"shape","id":"sh/mtwra5gb","slide":4,"bbox":[84,212,240,180]}
+{"kind":"textbox","id":"sh/fepkzupw","slide":4,"text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[112,238,44,28]}
+{"kind":"textbox","id":"sh/4zidonyd","slide":4,"text":"React + Vite","textPreview":"React + Vite","textChars":12,"textLines":1,"bbox":[112,280,180,44]}
+{"kind":"textbox","id":"sh/xkf6dcbu","slide":4,"text":"Interactive cargo planning UI","textPreview":"Interactive cargo planning UI","textChars":29,"textLines":1,"bbox":[112,328,178,48]}
+{"kind":"shape","id":"sh/qxs72x4n","slide":4,"bbox":[376,212,240,180]}
+{"kind":"textbox","id":"sh/fil0rqd4","slide":4,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[404,238,44,28]}
+{"kind":"textbox","id":"sh/fepkzupw","slide":4,"text":"Node + Express","textPreview":"Node + Express","textChars":14,"textLines":1,"bbox":[404,280,180,44]}
+{"kind":"textbox","id":"sh/mtwra5gb","slide":4,"text":"API endpoints for planning and risk","textPreview":"API endpoints for planning and risk","textChars":35,"textLines":1,"bbox":[404,328,178,48]}
+{"kind":"shape","id":"sh/xkf6dcbu","slide":4,"bbox":[668,212,240,180]}
+{"kind":"textbox","id":"sh/4zidonyd","slide":4,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[696,238,44,28]}
+{"kind":"textbox","id":"sh/f6dcbulw","slide":4,"text":"Load planner","textPreview":"Load planner","textChars":12,"textLines":1,"bbox":[696,280,180,44]}
+{"kind":"textbox","id":"sh/mlkjm1cf","slide":4,"text":"Deterministic 3D placement logic","textPreview":"Deterministic 3D placement logic","textChars":32,"textLines":1,"bbox":[696,328,178,48]}
+{"kind":"shape","id":"sh/xc3ylc7u","slide":4,"bbox":[960,212,240,180]}
+{"kind":"textbox","id":"sh/4r65wjud","slide":4,"text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[988,238,44,28]}
+{"kind":"textbox","id":"sh/fu18jqh0","slide":4,"text":"UiPath Maestro","textPreview":"UiPath Maestro","textChars":14,"textLines":1,"bbox":[988,280,180,44]}
+{"kind":"textbox","id":"sh/m94fu18j","slide":4,"text":"Case stages, rules, approvals, exceptions","textPreview":"Case stages, rules, approvals, exceptions","textChars":41,"textLines":1,"bbox":[988,328,178,48]}
+{"kind":"textbox","id":"sh/y90je9cv","slide":4,"text":"Maestro is the orchestration layer. The working web/API engine performs cargo fit, load planning, risk scoring, and dispatch logic.","textPreview":"Maestro is the orchestration layer. The working web/API engine performs cargo fit, load planning, risk scoring, and dispatch logic.","textChars":131,"textLines":1,"bbox":[154,476,972,70]}
+{"kind":"notes","id":"nt/uzah0o","slide":4,"text":""}
+{"kind":"slide","id":"sl/xrktv8","slide":5,"title":"Why it matters","textShapes":7}
+{"kind":"shape","id":"sh/r2p8nqxs","slide":5,"bbox":[0,0,1280,18]}
+{"kind":"textbox","id":"sh/kjm1cfa9","slide":5,"text":"Why it matters","textPreview":"Why it matters","textChars":14,"textLines":1,"bbox":[72,54,900,58]}
+{"kind":"textbox","id":"sh/94fu18jq","slide":5,"text":"UiPath AgentHack 2026 | Logithon CaseOps | 5","textPreview":"UiPath AgentHack 2026 | Logithon CaseOps | 5","textChars":44,"textLines":1,"bbox":[72,666,420,24]}
+{"kind":"shape","id":"sh/2p8nqxs7","slide":5,"bbox":[84,156,520,350]}
+{"kind":"textbox","id":"sh/ra5gbq1o","slide":5,"text":"Business impact","textPreview":"Business impact","textChars":15,"textLines":1,"bbox":[124,200,350,34]}
+{"kind":"textbox","id":"sh/gvy90je9","slide":5,"text":"Faster loading decisions\nLower dispatch risk\nClear evidence trail\nReusable case workflow","textPreview":"Faster loading decisions | Lower dispatch risk | Clear evidence trail | Reusable case workflow","textChars":88,"textLines":4,"bbox":[128,266,392,162]}
+{"kind":"shape","id":"sh/9gr2p8nq","slide":5,"bbox":[682,156,500,350]}
+{"kind":"textbox","id":"sh/2t83itgf","slide":5,"text":"Next steps","textPreview":"Next steps","textChars":10,"textLines":1,"bbox":[722,200,350,34]}
+{"kind":"textbox","id":"sh/re1w7mp0","slide":5,"text":"Deploy the API publicly\nConnect Maestro to API workflows\nAdd production Action Center approvals\nSupport more truck/container types","textPreview":"Deploy the API publicly | Connect Maestro to API workflows | Add production Action Center approvals | Support more truck/container types","textChars":130,"textLines":4,"bbox":[726,266,390,162]}
+{"kind":"textbox","id":"sh/bulwval8","slide":5,"text":"GitHub: mongonsh/SILO","textPreview":"GitHub: mongonsh/SILO","textChars":21,"textLines":1,"bbox":[420,568,440,34]}
+{"kind":"notes","id":"nt/xrktv8","slide":5,"text":""}
